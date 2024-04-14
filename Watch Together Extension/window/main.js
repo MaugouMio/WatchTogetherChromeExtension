@@ -61,6 +61,10 @@ document.addEventListener('DOMContentLoaded', function() {
 				searchResultVideoID = vID;
 			})
     });
+	// add video button event
+    $addVideoButton.addEventListener('click', function() {
+        sendMsg({"type": "add", "vid": searchResultVideoID});
+    });
 });
 
 // ============= WebSocket server protocol ============= //
@@ -85,7 +89,7 @@ function sendMsg(msg) {
 function onReceive(e) {
 	var msg = JSON.parse(e.data);
 	switch (msg.type) {
-		case "set":
+		case "list":
 			$playlistContainer.innerHTML = "";
 			playlist = msg.playlist;
 			for (let i = 0; i < playlist.length; i++) {
@@ -104,7 +108,7 @@ function onReceive(e) {
 			}
 			if (msg.id >= 0) {
 				playingID = msg.id;
-				if (ytPlayerReady)
+				if (!msg.update_only && ytPlayerReady)
 					ytPlayer.cueVideoById(playlist[playingID]);
 			}
 			break;

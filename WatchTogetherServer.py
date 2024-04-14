@@ -16,12 +16,13 @@ current_id = -1
 start_time = 0
 pause_time = 0
 playlist = [ "3cJzGD9xkzg", "lAM3diipp7Y" ]
-# init setting
-def GetInitPacket(play_id, current_list):
+# playlist data
+def GetListPacket(play_id, current_list, update_only = True):
 	return json.dumps({
-		"type": "set",
+		"type": "list",
 		"id": play_id,
-		"playlist": current_list
+		"playlist": current_list,
+		"update_only": update_only
 	})
 # load video but not play yet
 def GetLoadPacket(play_id):
@@ -49,7 +50,7 @@ async def process(websocket, path):
 	
 	USERS.add(websocket)
 	
-	await websocket.send(GetInitPacket(current_id, playlist))
+	await websocket.send(GetListPacket(current_id, playlist, False))
 	async for message in websocket:
 		data = json.loads(message)
 		print(data)
@@ -96,6 +97,10 @@ async def process(websocket, path):
 					# delay a little bit and broadcast the next video load msg
 					await asyncio.sleep(1)
 					await asyncio.wait([asyncio.create_task(user.send(GetLoadPacket(current_id))) for user in USERS])
+		elif protocol == "add":
+			playlist.append(data["vid"])
+			# broadcast new playlist
+			await asyncio.wait([asyncio.create_task(user.send(GetListPacket(current_id, playlist))) for user in USERS])
 		
 	USERS.remove(websocket)
 

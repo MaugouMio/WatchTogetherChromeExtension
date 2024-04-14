@@ -28,6 +28,9 @@
   flex-direction: row;
 }
 #url-input {
+  overflow: hidden;
+  resize: none;
+  white-space: nowrap;
   margin-left: 10px;
   width: 400px;
 }
