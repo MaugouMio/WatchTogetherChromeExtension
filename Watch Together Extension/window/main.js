@@ -91,35 +91,53 @@ function onReceive(e) {
 	switch (msg.type) {
 		case "list":
 			$playlistContainer.innerHTML = "";
-			playlist = msg.playlist;
-			for (let i = 0; i < playlist.length; i++) {
-				const vID = playlist[i];
-				var img = document.createElement("img");
-				let imageUrl = "https://i.ytimg.com/vi/" + vID + "/default.jpg";
-				img.src = imageUrl
+			playingID = msg.id;
+			playlist = [];
+			for (let i = 0; i < msg.playlist.length; i++) {
+				const videoID = msg.playlist[i];
 				
-				var btnRemove = document.createElement("button");
-				btnRemove.className = "playlist-remove";
-				btnRemove.innerHTML = "X";
-				btnRemove.addEventListener('click', function(event) {
-					event.stopPropagation();
-					sendMsg({"type": "remove", "id": i});
-				});
+				var btnFrame = document.createElement("div");
+				btnFrame.className = "playlist-item";
 				
-				var btn = document.createElement("button");
-				btn.className = "playlist-item";
-				btn.addEventListener('click', function() {
-					sendMsg({"type": "load", "id": i});
-				});
-				btn.appendChild(img);
-				btn.appendChild(btnRemove);
-				$playlistContainer.appendChild(btn);
-				$playlistContainer.appendChild(document.createElement("br"));
+					var btn = document.createElement("button");
+					btn.className = "playlist-item-button";
+					btn.addEventListener('click', function() {
+						sendMsg({"type": "load", "id": i});
+					});
+					btnFrame.appendChild(btn);
+					
+						var img = document.createElement("img");
+						let imageUrl = "https://i.ytimg.com/vi/" + videoID + "/default.jpg";
+						img.src = imageUrl
+						btn.appendChild(img);
+					
+					var playingOverlay = document.createElement("div");
+					playingOverlay.className = "playing-overlay";
+					playingOverlay.innerHTML = "playing";
+					if (playingID == i)
+						playingOverlay.style.visibility = "visible";
+					btnFrame.appendChild(playingOverlay);
+					
+					var btnRemove = document.createElement("button");
+					btnRemove.className = "playlist-remove";
+					btnRemove.innerHTML = "X";
+					btnRemove.addEventListener('click', function(event) {
+						sendMsg({"type": "remove", "id": i});
+					});
+					btnFrame.appendChild(btnRemove);
+				
+				$playlistContainer.appendChild(btnFrame);
+				playlist.push({ vID: videoID, overlayObj: playingOverlay });
 			}
-			if (msg.id >= 0) {
-				playingID = msg.id;
-				if (!msg.update_only && ytPlayerReady)
-					ytPlayer.cueVideoById(playlist[playingID]);
+			
+			if (ytPlayerReady) {
+				if (playingID < 0) {
+					// stop current playing video
+					if (ytPlayer.getPlayerState() == YT.PlayerState.PLAYING || ytPlayer.getPlayerState() == YT.PlayerState.PAUSED)
+						ytPlayer.seekTo(ytPlayer.getDuration());
+				}
+				else if (!msg.update_only)
+					ytPlayer.cueVideoById(playlist[playingID].vID);
 			}
 			break;
 		case "load":
@@ -127,7 +145,14 @@ function onReceive(e) {
 				break;
 			
 			playingID = msg.id;
-			ytPlayer.cueVideoById(playlist[playingID]);
+			// update playing notation
+			for (let i = 0; i < playlist.length; i++) {
+				if (i == playingID)
+					playlist[i].overlayObj.style.visibility = "visible";
+				else
+					playlist[i].overlayObj.style.visibility = "hidden";
+			}
+			ytPlayer.cueVideoById(playlist[playingID].vID);
 			break;
 		case "play":
 			if (!ytPlayerReady)
@@ -154,10 +179,13 @@ function onYouTubeIframeAPIReady() {
 function onPlayerReady(e) {
 	ytPlayerReady = true;
 	if (playingID >= 0)
-		ytPlayer.cueVideoById(playlist[playingID]);
+		ytPlayer.cueVideoById(playlist[playingID].vID);
 }
 // Youtube Player state changed
 function onPlayerStateChanged(e) {
+	if (playingID < 0)
+		return;
+	
 	switch (e.data) {
 		case YT.PlayerState.CUED:
 			sendMsg({"type": "ready", "id": playingID});
