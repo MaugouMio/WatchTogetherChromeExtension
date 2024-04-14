@@ -98,11 +98,21 @@ function onReceive(e) {
 				let imageUrl = "https://i.ytimg.com/vi/" + vID + "/default.jpg";
 				img.src = imageUrl
 				
+				var btnRemove = document.createElement("button");
+				btnRemove.className = "playlist-remove";
+				btnRemove.innerHTML = "X";
+				btnRemove.addEventListener('click', function(event) {
+					event.stopPropagation();
+					sendMsg({"type": "remove", "id": i});
+				});
+				
 				var btn = document.createElement("button");
+				btn.className = "playlist-item";
 				btn.addEventListener('click', function() {
 					sendMsg({"type": "load", "id": i});
 				});
 				btn.appendChild(img);
+				btn.appendChild(btnRemove);
 				$playlistContainer.appendChild(btn);
 				$playlistContainer.appendChild(document.createElement("br"));
 			}

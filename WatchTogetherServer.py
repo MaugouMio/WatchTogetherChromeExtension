@@ -97,10 +97,26 @@ async def process(websocket, path):
 					# delay a little bit and broadcast the next video load msg
 					await asyncio.sleep(1)
 					await asyncio.wait([asyncio.create_task(user.send(GetLoadPacket(current_id))) for user in USERS])
+					
 		elif protocol == "add":
 			playlist.append(data["vid"])
 			# broadcast new playlist
 			await asyncio.wait([asyncio.create_task(user.send(GetListPacket(current_id, playlist))) for user in USERS])
+		elif protocol == "remove":
+			target_id = data["id"]
+			if target_id >= 0 and target_id < len(playlist):
+				del playlist[target_id]
+				if target_id == current_id:
+					# load next video
+					start_time = 0
+					pause_time = 0
+					# broadcast new playlist and force load new video
+					await asyncio.wait([asyncio.create_task(user.send(GetListPacket(current_id, playlist, False))) for user in USERS])
+				else:
+					if target_id < current_id:
+						current_id -= 1
+					# broadcast new playlist
+					await asyncio.wait([asyncio.create_task(user.send(GetListPacket(current_id, playlist))) for user in USERS])
 		
 	USERS.remove(websocket)
 
