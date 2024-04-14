@@ -1,19 +1,46 @@
 * {
   box-sizing: border-box;
 }
+
+#connecting-ip {
+  margin-right: 10px;
+}
+
 .container {
   width: 1200px;
   margin-top: 8px;
   display: flex;
 }
-#ytplayer {
+
+#left-box {
   float: left;
+  width: 640px;
+}
+#ytplayer {
   width: 640px;
   height: 360px;
 }
-#connecting-ip {
-  margin-right: 10px;
+
+
+#search-field {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: row;
 }
+#url-input {
+  margin-left: 10px;
+  width: 400px;
+}
+#search-button {
+  margin-left: 10px;
+}
+
+#search-result {
+  margin-top: 10px;
+  visibility: hidden;
+}
+
+
 #playlist {
   margin-left: 10px;
   width: 300px

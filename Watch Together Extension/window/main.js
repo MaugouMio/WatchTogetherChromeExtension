@@ -2,9 +2,17 @@ const $titleText = document.querySelector('#title');
 const $ipInfo = document.querySelector('#connecting-ip');
 const $playlistContainer = document.querySelector('#playlist');
 const $backButton = document.querySelector('#stopConnectButton');
+const $urlInput = document.querySelector('#url-input');
+const $searchButton = document.querySelector('#search-button');
+const $searchResultFrame = document.querySelector('#search-result');
+const $addVideoButton = document.querySelector('#add-video-button');
+const $searchResultImg = document.querySelector('#search-result-img');
+const $searchResultTitle = document.querySelector('#search-result-title');
+const $searchResultAuthor = document.querySelector('#search-result-author');
 
 var ytPlayer = undefined;
 var ytPlayerReady = false;
+var searchResultVideoID = undefined;
 
 var ws = undefined;
 var playlist = [];
@@ -30,13 +38,30 @@ window.onbeforeunload = function() {
 		ws.close();
 }
 
-// back button event
 document.addEventListener('DOMContentLoaded', function() {
+	// back button event
     $backButton.addEventListener('click', function() {
         window.location.href = "./index.html";
     });
+	// search button event
+    $searchButton.addEventListener('click', function() {
+		var vID = $urlInput.value.match(/youtu(?:.*\/v\/|.*v\=|\.be\/)([A-Za-z0-9_\-]{11})/)[1];
+		if (vID === undefined)
+			return;
+		
+        fetch(`https://noembed.com/embed?dataType=json&url=${$urlInput.value}`)
+			.then(res => res.json())
+			.then(data => {
+				$searchResultFrame.style.visibility = "visible";
+				
+				let imageUrl = "https://i.ytimg.com/vi/" + vID + "/mqdefault.jpg";
+				$searchResultImg.src = imageUrl;
+				$searchResultTitle.innerHTML = data.title;
+				$searchResultAuthor.innerHTML = data.author_name;
+				searchResultVideoID = vID;
+			})
+    });
 });
-
 
 // ============= WebSocket server protocol ============= //
 

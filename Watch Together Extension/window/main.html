@@ -11,10 +11,24 @@
     <label id="connecting-ip">-</label>
     <button id="stopConnectButton">Back</button>
     <div class="container">
-      <iframe id="ytplayer" type="text/html"
-        src="https://www.youtube.com/embed/?enablejsapi=1"
-        frameborder="0" allowfullscreen>
-      </iframe>
+      <div id="left-box">
+        <iframe id="ytplayer" type="text/html"
+          src="https://www.youtube.com/embed/?enablejsapi=1"
+          frameborder="0" allowfullscreen>
+        </iframe>
+        <div id="search-field">
+          <label for="url-input">Enter Youtube URL</label>
+          <textarea id="url-input" rows="1"></textarea>
+          <button id="search-button">Search</button>
+        </div>
+        <div id="search-result">
+          <button id="add-video-button" title="Click to add to playlist">
+            <image id="search-result-img"></image>
+          </button>
+          <h2 id="search-result-title">Title</h2>
+          <h3 id="search-result-author">Author</h3>
+        </div>
+      </div>
       <div id="playlist">
       </div>
     </div>
