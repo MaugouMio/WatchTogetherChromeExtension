@@ -17,6 +17,7 @@ var searchResultVideoID = undefined;
 var ws = undefined;
 var playlist = [];
 var playingID = -1;
+var cacheVideoInfo = {};
 
 // get the IP data in storage and try to connect
 async function init() {
@@ -49,17 +50,28 @@ document.addEventListener('DOMContentLoaded', function() {
 		if (vID === undefined)
 			return;
 		
-        fetch(`https://noembed.com/embed?dataType=json&url=${$urlInput.value}`)
-			.then(res => res.json())
-			.then(data => {
-				$searchResultFrame.style.visibility = "visible";
-				
-				let imageUrl = "https://i.ytimg.com/vi/" + vID + "/mqdefault.jpg";
-				$searchResultImg.src = imageUrl;
-				$searchResultTitle.innerHTML = data.title;
-				$searchResultAuthor.innerHTML = data.author_name;
-				searchResultVideoID = vID;
-			})
+		var imageUrl = "https://i.ytimg.com/vi/" + vID + "/mqdefault.jpg";
+		var cacheData = cacheVideoInfo[vID];
+		if (cacheData === undefined) {
+			fetch(`https://noembed.com/embed?dataType=json&url=${$urlInput.value}`)
+				.then(res => res.json())
+				.then(data => {
+					$searchResultFrame.style.visibility = "visible";
+					
+					$searchResultImg.src = imageUrl;
+					$searchResultTitle.innerHTML = data.title;
+					$searchResultAuthor.innerHTML = data.author_name;
+					searchResultVideoID = vID;
+					// cache data for less html request
+					cacheVideoInfo[vID] = { title: data.title, author: data.author_name };
+				});
+		}
+		else {
+			$searchResultImg.src = imageUrl;
+			$searchResultTitle.innerHTML = cacheData.title;
+			$searchResultAuthor.innerHTML = cacheData.author;
+			searchResultVideoID = vID;
+		}
     });
 	// add video button event
     $addVideoButton.addEventListener('click', function() {
@@ -99,26 +111,41 @@ function onReceive(e) {
 				var btnFrame = document.createElement("div");
 				btnFrame.className = "playlist-item";
 				
-					var btn = document.createElement("button");
+					let btn = document.createElement("button");
 					btn.className = "playlist-item-button";
 					btn.addEventListener('click', function() {
 						sendMsg({"type": "load", "id": i});
 					});
 					btnFrame.appendChild(btn);
 					
-						var img = document.createElement("img");
+						let img = document.createElement("img");
 						let imageUrl = "https://i.ytimg.com/vi/" + videoID + "/default.jpg";
 						img.src = imageUrl
 						btn.appendChild(img);
+						
+						let infoFrame = document.createElement("div");
+						infoFrame.className = "playlist-item-info";
+						btn.appendChild(infoFrame);
+						
+							let title = document.createElement("p");
+							title.className = "playlist-item-info-text";
+							title.style.height = "80%";
+							infoFrame.appendChild(title);
+							
+							let author = document.createElement("p");
+							author.className = "playlist-item-info-text";
+							author.style.height = "20%";
+							author.style["text-wrap"] = "nowrap";
+							infoFrame.appendChild(author);
 					
-					var playingOverlay = document.createElement("div");
+					let playingOverlay = document.createElement("div");
 					playingOverlay.className = "playing-overlay";
 					playingOverlay.innerHTML = "playing";
 					if (playingID == i)
 						playingOverlay.style.visibility = "visible";
 					btnFrame.appendChild(playingOverlay);
 					
-					var btnRemove = document.createElement("button");
+					let btnRemove = document.createElement("button");
 					btnRemove.className = "playlist-remove";
 					btnRemove.innerHTML = "X";
 					btnRemove.addEventListener('click', function(event) {
@@ -128,6 +155,23 @@ function onReceive(e) {
 				
 				$playlistContainer.appendChild(btnFrame);
 				playlist.push({ vID: videoID, overlayObj: playingOverlay });
+				
+				// write video title and author
+				let cacheData = cacheVideoInfo[videoID];
+				if (cacheData === undefined) {
+					fetch(`https://noembed.com/embed?dataType=json&url=https://www.youtube.com/watch?v=${videoID}`)
+						.then(res => res.json())
+						.then(data => {
+							title.innerHTML = data.title;
+							author.innerHTML = data.author_name;
+							// cache data for less html request
+							cacheVideoInfo[videoID] = { title: data.title, author: data.author_name };
+						});
+				}
+				else {
+					title.innerHTML = cacheData.title;
+					author.innerHTML = cacheData.author;
+				}
 			}
 			
 			if (ytPlayerReady) {

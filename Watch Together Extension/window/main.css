@@ -58,6 +58,22 @@
   width: 100%;
   height: 120px;
 }
+.playlist-item-info {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 5px 12px 10px;
+  overflow: hidden;
+}
+.playlist-item-info-text {
+  overflow: hidden;
+  text-align: left;
+  /* text-wrap: nowrap; */
+  margin: 0;
+  text-overflow: ellipsis;
+}
 .playlist-item-button {
   width: 100%;
   height: 100%;
@@ -80,9 +96,9 @@
   font-size: 40px;
 }
 .playlist-remove {
-  margin-right: 10px;
-  transform: translate(0%, -50%);
+  transform: translate(100%, -50%);
   top: -150%;
+  left: 10px;
   position: relative;
   width: 25px;
   height: 25px;
