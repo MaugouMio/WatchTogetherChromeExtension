@@ -1,0 +1,20 @@
+* {
+  box-sizing: border-box;
+}
+.container {
+  width: 1200px;
+  margin-top: 8px;
+  display: flex;
+}
+#ytplayer {
+  float: left;
+  width: 640px;
+  height: 360px;
+}
+#connecting-ip {
+  margin-right: 10px;
+}
+#playlist {
+  margin-left: 10px;
+  width: 300px
+}

@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Watch Together",
+  "version": "0.0.1",
+  "permissions": [
+    "storage"
+  ],
+  "action": {},
+  "background": {
+    "service_worker": "background.js"
+  }
+}

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./main.css" />
+  </head>
+  <body>
+    <h1 id="title">Connecting...</h1>
+    <label id="connecting-ip">-</label>
+    <button id="stopConnectButton">Back</button>
+    <div class="container">
+      <iframe id="ytplayer" type="text/html"
+        src="https://www.youtube.com/embed/?enablejsapi=1"
+        frameborder="0" allowfullscreen>
+      </iframe>
+      <div id="playlist">
+      </div>
+    </div>
+    <script src="./youtube_player_api/iframe_api.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
