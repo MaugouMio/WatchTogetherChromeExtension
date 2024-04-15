@@ -17,6 +17,8 @@ var searchResultVideoID = undefined;
 var ws = undefined;
 var playlist = [];
 var playingID = -1;
+var serverCallPlayTime = -1;
+var serverPaused = false;
 var cacheVideoInfo = {};
 
 // get the IP data in storage and try to connect
@@ -184,6 +186,7 @@ function onReceive(e) {
 					ytPlayer.cueVideoById(playlist[playingID].vID);
 			}
 			break;
+			
 		case "load":
 			if (!ytPlayerReady)
 				break;
@@ -198,14 +201,22 @@ function onReceive(e) {
 			}
 			ytPlayer.cueVideoById(playlist[playingID].vID);
 			break;
+			
 		case "play":
 			if (!ytPlayerReady)
 				break;
 			if (msg.id != playingID)
 				break;
-			ytPlayer.seekTo(msg.time);
-			if (msg.paused)
+			
+			serverCallPlayTime = Date.now();
+			if (ytPlayer.getPlayerState() != YT.PlayerState.PLAYING ||
+				Math.abs(ytPlayer.getCurrentTime() - msg.time) > 0.5)
+				ytPlayer.seekTo(msg.time);
+			
+			serverPaused = msg.paused;
+			if (serverPaused)
 				ytPlayer.pauseVideo();
+			
 			break;
 	}
 };
@@ -235,9 +246,12 @@ function onPlayerStateChanged(e) {
 			sendMsg({"type": "ready", "id": playingID});
 			break;
 		case YT.PlayerState.PAUSED:
+			if (serverPaused)
+				break;
+			
 			// to avoid pause caused by seeking, delay a little bit and check again if still paused
 			setTimeout(function() {
-				if ( e.target.getPlayerState() == 2 ) {
+				if (ytPlayer.getPlayerState() == YT.PlayerState.PAUSED) {
 					sendMsg({"type": "pause", "id": playingID});
 				}
 			}, 200);
@@ -246,7 +260,9 @@ function onPlayerStateChanged(e) {
 			sendMsg({"type": "end", "id": playingID});
 			break;
 		case YT.PlayerState.PLAYING:
-			sendMsg({"type": "play", "id": playingID, "time": ytPlayer.getCurrentTime()});
+			// ignore play events just after the server called play
+			if (Math.abs(serverCallPlayTime - Date.now()) > 200)
+				sendMsg({"type": "play", "id": playingID, "time": ytPlayer.getCurrentTime()});
 			break;
 	}
 }
