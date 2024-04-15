@@ -119,6 +119,33 @@ async def process(websocket, path):
 						current_id -= 1
 					# broadcast new playlist
 					await asyncio.wait([asyncio.create_task(user.send(GetListPacket(current_id, playlist))) for user in USERS])
+		elif protocol == "move":
+			from_id = data["from"]
+			to_id = data["to"]
+			if from_id >= 0 and from_id < len(playlist) and to_id >= 0 and to_id < len(playlist):
+				if from_id != to_id:
+					targetVideo = playlist[from_id]
+					
+					if from_id < to_id:
+						for i in range(from_id, to_id):
+							playlist[i] = playlist[i + 1]
+							
+						if current_id == from_id:
+							current_id = to_id
+						elif current_id <= to_id:
+							current_id -= 1
+					else:
+						for i in range(from_id, to_id, -1):
+							playlist[i] = playlist[i - 1]
+							
+						if current_id == from_id:
+							current_id = to_id
+						elif current_id >= to_id:
+							current_id += 1
+							
+					playlist[to_id] = targetVideo
+					# broadcast new playlist
+					await asyncio.wait([asyncio.create_task(user.send(GetListPacket(current_id, playlist))) for user in USERS])
 		
 	USERS.remove(websocket)
 

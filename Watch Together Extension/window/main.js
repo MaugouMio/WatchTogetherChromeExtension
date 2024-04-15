@@ -21,6 +21,10 @@ var serverCallPlayTime = -1;
 var serverPaused = false;
 var cacheVideoInfo = {};
 
+var draggingIdx = -1;
+var dragCounter = 0;
+var dragLastEnter = null;
+
 // get the IP data in storage and try to connect
 async function init() {
 	chrome.storage.sync.get(null, (storage) => {
@@ -81,6 +85,78 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// ============= Playlist drag events ============= //
+
+function videoDragStart(e) {
+	draggingIdx = parseInt(e.target.getAttribute("video-idx"));
+	dragCounter = 0;
+	this.style.border = "thick dashed";
+}
+
+function videoDragEnd(e) {
+	this.style.border = null;
+	
+	if (dragLastEnter != null) {
+		dragLastEnter.style = null;
+		dragLastEnter = null;
+	}
+}
+
+function videoDragOver(e) {
+	e.preventDefault();
+	return false;
+}
+
+function videoDragEnter(e) {
+	let idx = this.getAttribute("video-idx");
+	if (idx == null)
+		return false;
+	
+	idx = parseInt(idx);
+	if (idx == draggingIdx)
+		return false;
+	
+	dragCounter++;
+	dragLastEnter = this;
+	
+	const borderColor = "8px ridge #00ff00";
+	if (draggingIdx < idx)
+		this.style["border-bottom"] = borderColor;
+	else
+		this.style["border-top"] = borderColor;
+}
+
+function videoDragLeave(e) {
+	let idx = this.getAttribute("video-idx");
+	if (idx == null)
+		return false;
+	
+	idx = parseInt(idx);
+	if (idx == draggingIdx)
+		return false;
+	
+	if (--dragCounter > 0)
+		return false;
+	
+	dragLastEnter = null;
+	this.style = null;
+}
+
+function videoDrop(e) {
+	e.stopPropagation();
+	
+	let idx = parseInt(this.getAttribute("video-idx"));
+	if (idx == null)
+		return false;
+	
+	idx = parseInt(idx);
+	if (idx == draggingIdx)
+		return false;
+
+	sendMsg({"type": "move", "from": draggingIdx, "to": idx});
+	return false;
+}
+
 // ============= WebSocket server protocol ============= //
 
 // on WebSocket connected
@@ -112,6 +188,14 @@ function onReceive(e) {
 				
 				var btnFrame = document.createElement("div");
 				btnFrame.className = "playlist-item";
+				btnFrame.setAttribute("video-idx", i);
+				btnFrame.draggable = true;
+				btnFrame.addEventListener("dragstart", videoDragStart);
+				btnFrame.addEventListener("dragend", videoDragEnd);
+				btnFrame.addEventListener("dragover", videoDragOver);
+				btnFrame.addEventListener("dragenter", videoDragEnter);
+				btnFrame.addEventListener("dragleave", videoDragLeave);
+				btnFrame.addEventListener("drop", videoDrop);
 				
 					let btn = document.createElement("button");
 					btn.className = "playlist-item-button";
