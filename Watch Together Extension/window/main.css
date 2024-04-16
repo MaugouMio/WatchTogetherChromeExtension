@@ -34,13 +34,18 @@
   margin-left: 10px;
   width: 400px;
 }
-#search-button {
+.search-button {
   margin-left: 10px;
 }
 
 #search-result {
   margin-top: 10px;
   visibility: hidden;
+}
+#search-result-img {
+  width: 480px;
+  height: 270px;
+  object-fit: contain;
 }
 #add-video-button {
   cursor: pointer;

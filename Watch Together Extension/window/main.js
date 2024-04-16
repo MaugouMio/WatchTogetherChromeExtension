@@ -3,7 +3,8 @@ const $ipInfo = document.querySelector('#connecting-ip');
 const $playlistContainer = document.querySelector('#playlist');
 const $backButton = document.querySelector('#stopConnectButton');
 const $urlInput = document.querySelector('#url-input');
-const $searchButton = document.querySelector('#search-button');
+const $searchVideoButton = document.querySelector('#video-button');
+const $searchPlaylistButton = document.querySelector('#playlist-button');
 const $searchResultFrame = document.querySelector('#search-result');
 const $addVideoButton = document.querySelector('#add-video-button');
 const $searchResultImg = document.querySelector('#search-result-img');
@@ -12,7 +13,9 @@ const $searchResultAuthor = document.querySelector('#search-result-author');
 
 var ytPlayer = undefined;
 var ytPlayerReady = false;
+var searchResultType = -1;  // 0 = video, 1 = playlist
 var searchResultVideoID = undefined;
+var searchResultPlaylistID = undefined;
 
 var ws = undefined;
 var playlist = [];
@@ -50,11 +53,13 @@ document.addEventListener('DOMContentLoaded', function() {
     $backButton.addEventListener('click', function() {
         window.location.href = "./index.html";
     });
-	// search button event
-    $searchButton.addEventListener('click', function() {
+	// search video button event
+    $searchVideoButton.addEventListener('click', function() {
 		var vID = $urlInput.value.match(/youtu(?:.*\/v\/|.*v\=|\.be\/)([A-Za-z0-9_\-]{11})/)[1];
-		if (vID === undefined)
+		if (vID === undefined) {
+			alert("Invalid video url!");
 			return;
+		}
 		
 		var imageUrl = "https://i.ytimg.com/vi/" + vID + "/mqdefault.jpg";
 		var cacheData = cacheVideoInfo[vID];
@@ -67,6 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
 					$searchResultImg.src = imageUrl;
 					$searchResultTitle.innerHTML = data.title;
 					$searchResultAuthor.innerHTML = data.author_name;
+					searchResultType = 0;
 					searchResultVideoID = vID;
 					// cache data for less html request
 					cacheVideoInfo[vID] = { title: data.title, author: data.author_name };
@@ -76,12 +82,21 @@ document.addEventListener('DOMContentLoaded', function() {
 			$searchResultImg.src = imageUrl;
 			$searchResultTitle.innerHTML = cacheData.title;
 			$searchResultAuthor.innerHTML = cacheData.author;
+			searchResultType = 0;
 			searchResultVideoID = vID;
 		}
     });
+	// search playlist button event
+    $searchPlaylistButton.addEventListener('click', function() {
+		sendMsg({"type": "search", "url": $urlInput.value});
+    });
 	// add video button event
     $addVideoButton.addEventListener('click', function() {
-        sendMsg({"type": "add", "vid": searchResultVideoID});
+		if (searchResultType == 0)
+			sendMsg({"type": "add", "vid": searchResultVideoID});
+		else if (searchResultType == 1) {
+			sendMsg({"type": "add_list", "lid": searchResultPlaylistID});
+		}
     });
 });
 
@@ -311,6 +326,21 @@ function onReceive(e) {
 			if (serverPaused)
 				ytPlayer.pauseVideo();
 			
+			break;
+			
+		case "search":
+			if (msg.id == "") {
+				alert("Invalid playlist url!");
+				break;
+			}
+			
+			$searchResultFrame.style.visibility = "visible";
+			
+			$searchResultImg.src = msg.icon;
+			$searchResultTitle.innerHTML = msg.title;
+			$searchResultAuthor.innerHTML = msg.len + " clip(s)";
+			searchResultPlaylistID = msg.id;
+			searchResultType = 1;
 			break;
 	}
 };

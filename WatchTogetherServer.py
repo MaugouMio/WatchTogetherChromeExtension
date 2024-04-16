@@ -6,9 +6,20 @@ except:
 	os.system("pip3 install websockets")
 	import websockets
 
+try:
+	import pytube
+except:
+	os.system("pip3 install pytube")
+	import pytube
+
 import asyncio
 import json
 import time
+import re
+
+
+
+YT_VID_REGEX = r"v=([^\&\?\/]*)"
 
 
 
@@ -16,6 +27,7 @@ current_id = -1
 start_time = 0
 pause_time = 0
 playlist = [ "3cJzGD9xkzg", "lAM3diipp7Y" ]
+playlist_info_cache = {}
 # playlist data
 def GetListPacket(play_id, current_list, update_only = True):
 	return json.dumps({
@@ -38,6 +50,18 @@ def GetPlayPacket(play_id, now, paused):
 		"time": now,
 		"paused": paused
 	})
+# playlist data request by user
+def GetPlaylistPacket(playlist_data):
+	if playlist_data == None:
+		return json.dumps({ "type": "search", "id": "" })
+	else:
+		return json.dumps({
+			"type": "search",
+			"id": playlist_data["id"],
+			"title": playlist_data["title"],
+			"icon": playlist_data["icon"],
+			"len": len(playlist_data["list"]),
+		})
 
 
 
@@ -47,6 +71,7 @@ async def process(websocket, path):
 	global start_time
 	global pause_time
 	global playlist
+	global playlist_info_cache
 	
 	USERS.add(websocket)
 	
@@ -102,6 +127,12 @@ async def process(websocket, path):
 			playlist.append(data["vid"])
 			# broadcast new playlist
 			await asyncio.wait([asyncio.create_task(user.send(GetListPacket(current_id, playlist))) for user in USERS])
+		elif protocol == "add_list":
+			list_id = data["lid"]
+			if list_id in playlist_info_cache:
+				playlist += playlist_info_cache[list_id]["list"]
+				# broadcast new playlist
+				await asyncio.wait([asyncio.create_task(user.send(GetListPacket(current_id, playlist))) for user in USERS])
 		elif protocol == "remove":
 			target_id = data["id"]
 			if target_id >= 0 and target_id < len(playlist):
@@ -146,6 +177,26 @@ async def process(websocket, path):
 					playlist[to_id] = targetVideo
 					# broadcast new playlist
 					await asyncio.wait([asyncio.create_task(user.send(GetListPacket(current_id, playlist))) for user in USERS])
+		
+		elif protocol == "search":
+			try:
+				playlist_obj = pytube.Playlist(data["url"])
+				playlist_id = playlist_obj.playlist_id
+				if playlist_id not in playlist_info_cache:
+					playlist_title = playlist_obj.title
+					video_id_list = [re.search(YT_VID_REGEX, url).group(1) for url in playlist_obj.video_urls]
+					
+					thumbnailData = playlist_obj.sidebar_info[0]["playlistSidebarPrimaryInfoRenderer"]["thumbnailRenderer"]
+					if "playlistCustomThumbnailRenderer" in thumbnailData:  # has custom thumbnail for playlist
+						icon_url = thumbnailData["playlistCustomThumbnailRenderer"]["thumbnail"]["thumbnails"][-1]["url"]
+					else:  # use first video thumbnail
+						icon_url = f"https://i.ytimg.com/vi/{videoID}/mqdefault.jpg"
+						
+					playlist_info_cache[playlist_id] = { "id": playlist_id, "title": playlist_title, "icon": icon_url, "list": video_id_list }
+				
+				await websocket.send(GetPlaylistPacket(playlist_info_cache[playlist_id]))
+			except:
+				await websocket.send(GetPlaylistPacket(None))
 		
 	USERS.remove(websocket)
 
