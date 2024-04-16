@@ -108,6 +108,9 @@ function videoDragOver(e) {
 }
 
 function videoDragEnter(e) {
+	if (draggingIdx < 0)
+		return false;
+	
 	let idx = this.getAttribute("video-idx");
 	if (idx == null)
 		return false;
@@ -127,6 +130,9 @@ function videoDragEnter(e) {
 }
 
 function videoDragLeave(e) {
+	if (draggingIdx < 0)
+		return false;
+	
 	let idx = this.getAttribute("video-idx");
 	if (idx == null)
 		return false;
@@ -144,6 +150,9 @@ function videoDragLeave(e) {
 
 function videoDrop(e) {
 	e.stopPropagation();
+	
+	if (draggingIdx < 0)
+		return false;
 	
 	let idx = parseInt(this.getAttribute("video-idx"));
 	if (idx == null)
@@ -181,6 +190,7 @@ function onReceive(e) {
 	switch (msg.type) {
 		case "list":
 			$playlistContainer.innerHTML = "";
+			draggingIdx = -1;  // reset drag event
 			playingID = msg.id;
 			playlist = [];
 			for (let i = 0; i < msg.playlist.length; i++) {
