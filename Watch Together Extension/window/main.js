@@ -79,6 +79,8 @@ document.addEventListener('DOMContentLoaded', function() {
 				});
 		}
 		else {
+			$searchResultFrame.style.visibility = "visible";
+			
 			$searchResultImg.src = imageUrl;
 			$searchResultTitle.innerHTML = cacheData.title;
 			$searchResultAuthor.innerHTML = cacheData.author;
