@@ -8,5 +8,15 @@
   "action": {},
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/watch*"],
+      "js": ["window/modify.js"],
+	  "css": ["window/main.css"],
+	  "run_at": "document_start",
+	  "world": "MAIN"
+    }
+  ],
+  "incognito": "split"
 }

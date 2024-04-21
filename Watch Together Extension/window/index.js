@@ -1,4 +1,5 @@
 const $ipInput = document.querySelector('#ip-input');
+const $button = document.querySelector('#connectButton');
 
 // process user input and save to storage
 $ipInput.addEventListener('input', (e) => {
@@ -16,14 +17,15 @@ async function fetchData() {
 	});
 }
 window.onload = () => {
+	document.title = "Watch Together Extension";
 	fetchData();
 }
 
 // connect button event
 document.addEventListener('DOMContentLoaded', function() {
-    var button = document.querySelector('#connectButton');
-    button.addEventListener('click', function() {
+    $button.addEventListener('click', function() {
 		chrome.storage.sync.set({ cacheIP: $ipInput.value });  // always save content before connect
-        window.location.href = "./main.html";
+        // window.location.href = "./main.html";
+		chrome.tabs.update({url:`https://www.youtube.com/watch?v=6zg0JvlpYZ4&watchTogetherIP=${$ipInput.value}`});
     });
 });

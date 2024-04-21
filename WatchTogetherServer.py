@@ -103,14 +103,13 @@ async def process(websocket, path):
 					await asyncio.wait([asyncio.create_task(user.send(GetPlayPacket(current_id, pause_time - start_time, True))) for user in USERS])
 		elif protocol == "play":
 			if data["id"] == current_id:
-				pause_time = 0  # force start playing
-				
 				client_played_time = data["time"]
 				current_time = time.time()
-				if abs(client_played_time - (current_time - start_time)) > 1:  # 1 second diff tolerant
+				if pause_time > 0 or abs(client_played_time - (current_time - start_time)) > 1:  # 1 second diff tolerant
+					pause_time = 0  # force start playing
 					start_time = current_time - client_played_time
 					# broadcast seek to time
-					await asyncio.wait([asyncio.create_task(user.send(GetPlayPacket(current_id, current_time - start_time, False))) for user in USERS])
+					await asyncio.wait([asyncio.create_task(user.send(GetPlayPacket(current_id, client_played_time, False))) for user in USERS])
 		elif protocol == "end":
 			if data["id"] == current_id:
 				current_id += 1  # only process the first user end event
@@ -120,7 +119,7 @@ async def process(websocket, path):
 					current_id = -1  # stop playing
 				else:
 					# delay a little bit and broadcast the next video load msg
-					await asyncio.sleep(1)
+					await asyncio.sleep(2)
 					await asyncio.wait([asyncio.create_task(user.send(GetLoadPacket(current_id))) for user in USERS])
 					
 		elif protocol == "add":
