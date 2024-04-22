@@ -12,7 +12,7 @@ var ytPlayer;
 var htmlVideo;
 var ytPlayerReady = false;
 
-var adCheck = 0;
+var videoFailReasonCheck = 0;
 var isFirstLoad = false;
 
 var searchResultType = -1;  // 0 = video, 1 = playlist
@@ -258,9 +258,9 @@ function onPlayerStateChanged(e) {
 	if (playingID < 0)
 		return;
 	console.log(e);
-	if (adCheck > 0) {
-		clearInterval(adCheck);
-		adCheck = 0;
+	if (videoFailReasonCheck > 0) {
+		clearInterval(videoFailReasonCheck);
+		videoFailReasonCheck = 0;
 	}
 	switch (e) {
 		case YTPlayerState.CUED:
@@ -298,16 +298,20 @@ function onPlayerStateChanged(e) {
 					sendMsg({"type": "play", "id": playingID, "time": ytPlayer.getCurrentTime()});
 			}
 			break;
-		// case YTPlayerState.UNLOADED:
-			// adCheck = setInterval(() => {
-				// console.log(document.querySelector("div.ad-showing"));
+		case YTPlayerState.UNLOADED:
+			videoFailReasonCheck = setInterval(() => {
+				if (document.getElementsByClassName("ytp-error")[0]) {
+					sendMsg({"type": "end", "id": playingID});
+					clearInterval(videoFailReasonCheck);
+					videoFailReasonCheck = 0;
+				}
 				// if (document.querySelector("div.ad-showing")) {
 					// wasAdPlaying = true;
-					// clearInterval(adCheck);
-					// adCheck = 0;
+					// clearInterval(videoFailReasonCheck);
+					// videoFailReasonCheck = 0;
 				// }
-			// }, 50);
-			// break;
+			}, 50);
+			break;
 	}
 }
 
