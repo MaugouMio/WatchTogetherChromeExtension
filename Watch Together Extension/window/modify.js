@@ -279,8 +279,8 @@ function onPlayerStateChanged(e) {
 			}, 200);
 			break;
 		case YTPlayerState.ENDED:
-			sendMsg({"type": "end", "id": playingID});
-			ytPlayer.stopVideo();  // avoid auto-play
+			// to avoid autoplay, we need to stop the video before it ends
+			// sendMsg({"type": "end", "id": playingID});
 			break;
 		case YTPlayerState.PLAYING:
 			// ignore play events just after the server called play
@@ -486,6 +486,14 @@ if (watchTogetherIP != null) {
 		nextButton.parentElement.removeChild(nextButton);
 		miniPlayerButton.parentElement.removeChild(miniPlayerButton);
 		sizeControlButton.parentElement.removeChild(sizeControlButton);
+		
+		// stop the video before it ends to avoid autoplay
+		htmlVideo.ontimeupdate = () => {
+			if (ytPlayer.getPlayerState() == YTPlayerState.PLAYING && htmlVideo.duration - htmlVideo.currentTime < 0.3) {
+				sendMsg({"type": "end", "id": playingID});
+				ytPlayer.cancelPlayback();
+			}
+		}
 		
 		clearInterval(initCheck);
 	}, 100);
