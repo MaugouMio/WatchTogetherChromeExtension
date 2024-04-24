@@ -393,6 +393,7 @@ if (watchTogetherIP != null) {
 				searchResultType = 0;
 				searchResultVideoID = vID;
 			}
+			$urlInput.value = "";
 		});
 		searchField.appendChild($searchVideoButton);
 		
@@ -402,6 +403,7 @@ if (watchTogetherIP != null) {
 		$searchPlaylistButton.innerHTML = "Playlist";
 		$searchPlaylistButton.addEventListener('click', function() {
 			sendMsg({"type": "search", "url": $urlInput.value});
+			$urlInput.value = "";
 		});
 		searchField.appendChild($searchPlaylistButton);
 	

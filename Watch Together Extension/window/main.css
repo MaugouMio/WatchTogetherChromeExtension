@@ -59,6 +59,9 @@ body.inheritCursors * {
   height: 270px;
   cursor: pointer;
   padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 
