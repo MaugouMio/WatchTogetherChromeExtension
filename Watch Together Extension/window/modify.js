@@ -84,6 +84,24 @@ function videoDragLeave(e) {
 	this.style = null;
 }
 
+function onClickOutside(e) {
+	copyURLButton.style.visibility = "hidden";
+	document.removeEventListener("click", onClickOutside);
+}
+
+function videoRightClick(e) {
+	e.preventDefault();
+	e.stopPropagation();
+	document.addEventListener("click", onClickOutside);
+	
+	const rect = e.target.getBoundingClientRect();
+	copyURLButton.style.visibility = "visible";
+	copyURLButton.style.top = `${rect.top + e.offsetY}px`;
+	copyURLButton.style.left  = `${rect.left + e.offsetX}px`;
+	
+	rightClickVideoID = playlist[parseInt(e.currentTarget.getAttribute("video-idx"))].vID;
+}
+
 // ============= WebSocket server protocol ============= //
 
 // on WebSocket connected
@@ -119,6 +137,7 @@ function onReceive(e) {
 				btnFrame.setAttribute("video-idx", i);
 				btnFrame.addEventListener("mouseover", videoDragEnter);
 				btnFrame.addEventListener("mouseout", videoDragLeave);
+				btnFrame.addEventListener("contextmenu", videoRightClick);
 					
 					let btnDrag = document.createElement("button");
 					btnDrag.className = "playlist-drag";
@@ -355,7 +374,7 @@ if (watchTogetherIP != null) {
 		$searchVideoButton.id = "video-button";
 		$searchVideoButton.className = "search-button";
 		$searchVideoButton.innerHTML = "Video";
-		$searchVideoButton.addEventListener('click', function() {
+		$searchVideoButton.addEventListener("click", function() {
 			try {
 				var vID = $urlInput.value.match(/youtu(?:.*\/v\/|.*v\=|\.be\/)([A-Za-z0-9_\-]{11})/)[1];
 			}
@@ -401,7 +420,7 @@ if (watchTogetherIP != null) {
 		$searchPlaylistButton.id = "playlist-button";
 		$searchPlaylistButton.className = "search-button";
 		$searchPlaylistButton.innerHTML = "Playlist";
-		$searchPlaylistButton.addEventListener('click', function() {
+		$searchPlaylistButton.addEventListener("click", function() {
 			sendMsg({"type": "search", "url": $urlInput.value});
 			$urlInput.value = "";
 		});
@@ -413,7 +432,7 @@ if (watchTogetherIP != null) {
 		var $addVideoButton = document.createElement("button");
 		$addVideoButton.id = "add-video-button";
 		$addVideoButton.title = "Click to add to playlist";
-		$addVideoButton.addEventListener('click', function() {
+		$addVideoButton.addEventListener("click", function() {
 			if (searchResultType == 0)
 				sendMsg({"type": "add", "vid": searchResultVideoID});
 			else if (searchResultType == 1) {
@@ -433,6 +452,24 @@ if (watchTogetherIP != null) {
 		var $searchResultAuthor = document.createElement("h2");
 		$searchResultAuthor.id = "search-result-author";
 		$searchResultFrame.appendChild($searchResultAuthor);
+		
+	var copyURLButton = document.createElement("button");
+	copyURLButton.innerHTML = "Copy URL";
+	copyURLButton.style.visibility = "hidden";
+	copyURLButton.style.position = "absolute";
+	copyURLButton.addEventListener("click", function(e) {
+		e.stopPropagation();
+		onClickOutside(e);
+		
+		const el = document.createElement("textarea");
+		el.value = `https://www.youtube.com/watch?v=${rightClickVideoID}`;
+		document.body.appendChild(el);
+		el.select();
+		document.execCommand("copy");
+		document.body.removeChild(el);
+		
+		setTimeout(() => {alert("Video URL Copied!");}, 1);
+	});
 		
 	// =================================================================================
 	
@@ -476,6 +513,7 @@ if (watchTogetherIP != null) {
 		
 		topBar.innerHTML = "";
 		topBar.appendChild($ipInfo);
+		topBar.appendChild(copyURLButton);
 		
 		let tmpElement = rightFrame;
 		rightFrame = rightFrame.parentElement;
