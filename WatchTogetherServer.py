@@ -15,11 +15,17 @@ except:
 import asyncio
 import json
 import time
+import random
 import re
 
 
 
 YT_VID_REGEX = r"v=([^\&\?\/]*)"
+PLAYMODE = {
+	"DEFAULT": 0,
+	"LOOP": 1,
+	"RANDOM": 2
+}
 
 
 
@@ -28,6 +34,7 @@ start_time = 0
 pause_time = 0
 playlist = [ "3cJzGD9xkzg", "lAM3diipp7Y" ]
 playlist_info_cache = {}
+playmode = PLAYMODE["DEFAULT"]
 # playlist data
 def GetListPacket(play_id, current_list, update_only = True):
 	return json.dumps({
@@ -62,6 +69,9 @@ def GetPlaylistPacket(playlist_data):
 			"icon": playlist_data["icon"],
 			"len": len(playlist_data["list"]),
 		})
+# playmode request by user
+def GetPlayModePacket(mode):
+	return json.dumps({ "type": "playmode", "mode": mode })
 
 
 
@@ -72,10 +82,12 @@ async def process(websocket, path):
 	global pause_time
 	global playlist
 	global playlist_info_cache
+	global playmode
 	
 	USERS.add(websocket)
 	
 	await websocket.send(GetListPacket(current_id, playlist, False))
+	await websocket.send(GetPlayModePacket(playmode))
 	async for message in websocket:
 		data = json.loads(message)
 		print(data)
@@ -112,12 +124,23 @@ async def process(websocket, path):
 					await asyncio.wait([asyncio.create_task(user.send(GetPlayPacket(current_id, client_played_time, False))) for user in USERS])
 		elif protocol == "end":
 			if data["id"] == current_id:
-				current_id += 1  # only process the first user end event
 				start_time = 0
 				pause_time = 0
-				if current_id >= len(playlist):
-					current_id = -1  # stop playing
+				keep_playing = True
+				if playmode == PLAYMODE["RANDOM"]:
+					tempList = list(range(len(playlist)))
+					tempList[current_id], tempList[-1] = tempList[-1], tempList[current_id]
+					current_id = tempList[random.randint(0, len(tempList) - 2)]  # random except the last element (current_id)
 				else:
+					current_id += 1
+					if current_id >= len(playlist):
+						if playmode == PLAYMODE["DEFAULT"]:
+							current_id = -1  # stop playing
+							keep_playing = False
+						elif playmode == PLAYMODE["LOOP"]:
+							current_id = 0
+						
+				if keep_playing:
 					# delay a little bit and broadcast the next video load msg
 					await asyncio.sleep(2)
 					await asyncio.wait([asyncio.create_task(user.send(GetLoadPacket(current_id))) for user in USERS])
@@ -196,6 +219,12 @@ async def process(websocket, path):
 				await websocket.send(GetPlaylistPacket(playlist_info_cache[playlist_id]))
 			except:
 				await websocket.send(GetPlaylistPacket(None))
+				
+		elif protocol == "playmode":
+			if data["mode"] != playmode:
+				playmode = data["mode"]
+				# broadcast new playmode
+				await asyncio.wait([asyncio.create_task(user.send(GetPlayModePacket(playmode))) for user in USERS])
 		
 	USERS.remove(websocket)
 

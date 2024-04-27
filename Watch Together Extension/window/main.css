@@ -10,6 +10,18 @@ body.inheritCursors * {
   font-size: 20px;
 }
 
+#copy-url-button {
+  width: 100px;
+  height: 25px;
+  border: none;
+  position: absolute;
+  visibility: hidden;
+  background: #111
+}
+#copy-url-button:hover {
+  background: #999
+}
+
 /* .container { */
   /* width: 1200px; */
   /* margin-top: 8px; */
@@ -69,6 +81,16 @@ body.inheritCursors * {
   width: 400px;
   display: flex;
   justify-content: center;
+}
+#where-button {
+  margin-right: 40px;
+}
+.play-mode-toggle {
+  margin-left: 10px;
+}
+.play-mode-toggle.active {
+  margin-left: 10px;
+  border: 2px solid yellow;
 }
 
 #playlist {

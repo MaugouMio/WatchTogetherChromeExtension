@@ -7,6 +7,12 @@ const YTPlayerState = {
 	CUED: 5
 }
 
+const PlayMode = {
+	DEFAULT: 0,
+	LOOP: 1,
+	RANDOM: 2
+}
+
 var initCheck;
 var ytPlayer;
 var htmlVideo;
@@ -25,6 +31,7 @@ var playingID = -1;
 var serverCallPlayTime = -1;
 var serverPlayTime = -1;
 var serverPaused = false;
+var serverPlayMode = PlayMode.DEFAULT;
 var cacheVideoInfo = {};
 
 var draggingIdx = -1;
@@ -96,8 +103,8 @@ function videoRightClick(e) {
 	
 	const rect = e.target.getBoundingClientRect();
 	copyURLButton.style.visibility = "visible";
-	copyURLButton.style.top = `${rect.top + e.offsetY}px`;
-	copyURLButton.style.left  = `${rect.left + e.offsetX}px`;
+	copyURLButton.style.top = `${rect.top + e.offsetY + 3}px`;
+	copyURLButton.style.left  = `${rect.left + e.offsetX + 3}px`;
 	
 	rightClickVideoID = playlist[parseInt(e.currentTarget.getAttribute("video-idx"))].vID;
 }
@@ -269,6 +276,20 @@ function onReceive(e) {
 			searchResultPlaylistID = msg.id;
 			searchResultType = 1;
 			break;
+			
+		case "playmode":
+			serverPlayMode = msg.mode;
+			
+			if (serverPlayMode == PlayMode.LOOP)
+				loopButton.classList.add("active");
+			else
+				loopButton.classList.remove("active");
+			
+			if (serverPlayMode == PlayMode.RANDOM)
+				randomButton.classList.add("active");
+			else
+				randomButton.classList.remove("active");
+			break;
 	}
 };
 
@@ -295,7 +316,7 @@ function onPlayerStateChanged(e) {
 				if (ytPlayer.getPlayerState() == YTPlayerState.PAUSED) {
 					sendMsg({"type": "pause", "id": playingID});
 				}
-			}, 200);
+			}, 300);
 			break;
 		case YTPlayerState.ENDED:
 			// to avoid autoplay, we need to stop the video before it ends
@@ -358,6 +379,7 @@ if (watchTogetherIP != null) {
 	playlistControlFrame.id = "playlist-control";
 	
 		let whereButton = document.createElement("button");
+		whereButton.id = "where-button";
 		whereButton.innerHTML = "where";
 		whereButton.addEventListener("click", function() {
 			if (playingID < 0)
@@ -368,6 +390,28 @@ if (watchTogetherIP != null) {
 			});
 		});
 		playlistControlFrame.appendChild(whereButton);
+	
+		var loopButton = document.createElement("button");
+		loopButton.className = "play-mode-toggle";
+		loopButton.innerHTML = "loop";
+		loopButton.addEventListener("click", function() {
+			if (serverPlayMode == PlayMode.LOOP)
+				sendMsg({"type": "playmode", "mode": PlayMode.DEFAULT});
+			else
+				sendMsg({"type": "playmode", "mode": PlayMode.LOOP});
+		});
+		playlistControlFrame.appendChild(loopButton);
+	
+		var randomButton = document.createElement("button");
+		randomButton.className = "play-mode-toggle";
+		randomButton.innerHTML = "random";
+		randomButton.addEventListener("click", function() {
+			if (serverPlayMode == PlayMode.RANDOM)
+				sendMsg({"type": "playmode", "mode": PlayMode.DEFAULT});
+			else
+				sendMsg({"type": "playmode", "mode": PlayMode.RANDOM});
+		});
+		playlistControlFrame.appendChild(randomButton);
 	
 	var $playlistContainer = document.createElement("div");
 	$playlistContainer.id = "playlist";
@@ -470,8 +514,7 @@ if (watchTogetherIP != null) {
 		
 	var copyURLButton = document.createElement("button");
 	copyURLButton.innerHTML = "Copy URL";
-	copyURLButton.style.visibility = "hidden";
-	copyURLButton.style.position = "absolute";
+	copyURLButton.id = "copy-url-button";
 	copyURLButton.addEventListener("click", function(e) {
 		e.stopPropagation();
 		onClickOutside(e);
@@ -483,7 +526,7 @@ if (watchTogetherIP != null) {
 		document.execCommand("copy");
 		document.body.removeChild(el);
 		
-		setTimeout(() => {alert("Video URL Copied!");}, 1);
+		setTimeout(() => {alert("Video URL Copied!");}, 10);
 	});
 		
 	// =================================================================================
