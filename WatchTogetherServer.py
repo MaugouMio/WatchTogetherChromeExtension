@@ -32,6 +32,7 @@ PLAYMODE = {
 current_id = -1
 start_time = 0
 pause_time = 0
+playback_rate = 1
 playlist = [ "3cJzGD9xkzg", "lAM3diipp7Y" ]
 playlist_info_cache = {}
 playmode = PLAYMODE["DEFAULT"]
@@ -50,11 +51,12 @@ def GetLoadPacket(play_id):
 		"id": play_id
 	})
 # play video at specified time
-def GetPlayPacket(play_id, now, paused):
+def GetPlayPacket(play_id, now, rate, paused):
 	return json.dumps({
 		"type": "play",
 		"id": play_id,
 		"time": now,
+		"rate": rate,
 		"paused": paused
 	})
 # playlist data request by user
@@ -80,6 +82,7 @@ async def process(websocket, path):
 	global current_id
 	global start_time
 	global pause_time
+	global playback_rate
 	global playlist
 	global playlist_info_cache
 	global playmode
@@ -104,24 +107,24 @@ async def process(websocket, path):
 					start_time = time.time()
 					
 				if pause_time > 0:
-					await websocket.send(GetPlayPacket(current_id, pause_time - start_time, True))
+					await websocket.send(GetPlayPacket(current_id, (pause_time - start_time) * playback_rate, playback_rate, True))
 				else:
-					await websocket.send(GetPlayPacket(current_id, time.time() - start_time, False))
+					await websocket.send(GetPlayPacket(current_id, (time.time() - start_time) * playback_rate, playback_rate, False))
 		elif protocol == "pause":
 			if data["id"] == current_id:
 				if pause_time == 0:
 					pause_time = time.time()
 					# broadcast pause
-					await asyncio.wait([asyncio.create_task(user.send(GetPlayPacket(current_id, pause_time - start_time, True))) for user in USERS])
+					await asyncio.wait([asyncio.create_task(user.send(GetPlayPacket(current_id, (pause_time - start_time) * playback_rate, playback_rate, True))) for user in USERS])
 		elif protocol == "play":
 			if data["id"] == current_id:
 				client_played_time = data["time"]
 				current_time = time.time()
-				if pause_time > 0 or abs(client_played_time - (current_time - start_time)) > 1:  # 1 second diff tolerant
+				if pause_time > 0 or abs((client_played_time / playback_rate) - (current_time - start_time)) > 1:  # 1 second diff tolerant
 					pause_time = 0  # force start playing
-					start_time = current_time - client_played_time
+					start_time = current_time - client_played_time / playback_rate
 					# broadcast seek to time
-					await asyncio.wait([asyncio.create_task(user.send(GetPlayPacket(current_id, client_played_time, False))) for user in USERS])
+					await asyncio.wait([asyncio.create_task(user.send(GetPlayPacket(current_id, client_played_time, playback_rate, False))) for user in USERS])
 		elif protocol == "end":
 			if data["id"] == current_id:
 				start_time = 0
@@ -232,6 +235,21 @@ async def process(websocket, path):
 				playmode = data["mode"]
 				# broadcast new playmode
 				await asyncio.wait([asyncio.create_task(user.send(GetPlayModePacket(playmode))) for user in USERS])
+				
+		elif protocol == "rate":
+			if abs(data["rate"] - playback_rate) > 0.01:
+				# always make [(current_time - start_time) * playback_rate] == video play time
+				if pause_time > 0:
+					video_time = (pause_time - start_time) * playback_rate
+					start_time = pause_time - video_time / playback_rate
+				else:
+					current_time = time.time()
+					video_time = (current_time - start_time) * playback_rate
+					playback_rate = data["rate"]
+					start_time = current_time - video_time / playback_rate
+					
+				# broadcast new playback rate using play packet
+				await asyncio.wait([asyncio.create_task(user.send(GetPlayPacket(current_id, video_time, playback_rate, pause_time > 0))) for user in USERS])
 		
 	USERS.remove(websocket)
 

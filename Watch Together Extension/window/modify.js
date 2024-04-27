@@ -32,6 +32,7 @@ var serverCallPlayTime = -1;
 var serverPlayTime = -1;
 var serverPaused = false;
 var serverPlayMode = PlayMode.DEFAULT;
+var serverPlaybackRate = 1;
 var cacheVideoInfo = {};
 
 var draggingIdx = -1;
@@ -254,6 +255,10 @@ function onReceive(e) {
 			if (Math.abs(ytPlayer.getCurrentTime() - serverPlayTime) > 0.5)
 				ytPlayer.seekTo(serverPlayTime, true);
 			
+			serverPlaybackRate = msg.rate;
+			if (Math.abs(ytPlayer.getPlaybackRate() - serverPlaybackRate) > 0.01)
+				ytPlayer.setPlaybackRate(serverPlaybackRate);
+			
 			serverPaused = msg.paused;
 			if (serverPaused) {
 				if (!isFirstLoad)  // directly pause the video will cause the play event never fires (which means you don't know when to fix the timeline) when there is no ads
@@ -299,7 +304,7 @@ function onReceive(e) {
 function onPlayerStateChanged(e) {
 	if (playingID < 0)
 		return;
-	console.log(e);
+	
 	if (videoFailReasonCheck > 0) {
 		clearInterval(videoFailReasonCheck);
 		videoFailReasonCheck = 0;
@@ -334,7 +339,7 @@ function onPlayerStateChanged(e) {
 						ytPlayer.pauseVideo();
 					}
 					else
-						ytPlayer.seekTo(serverPlayTime + (Date.now() - serverCallPlayTime) / 1000, true);
+						ytPlayer.seekTo(serverPlayTime + (Date.now() - serverCallPlayTime) / 1000 * serverPlaybackRate, true);
 				}
 				else
 					sendMsg({"type": "play", "id": playingID, "time": ytPlayer.getCurrentTime()});
@@ -355,6 +360,16 @@ function onPlayerStateChanged(e) {
 			}, 50);
 			break;
 	}
+}
+
+// Youtube playback rate changed
+function onPlaybackRateChanged(e) {
+	if (playingID < 0)
+		return;
+	if (Math.abs(serverPlaybackRate - e) < 0.01)
+		return;
+	
+	sendMsg({"type": "rate", "rate": e});
 }
 
 
@@ -565,6 +580,7 @@ if (watchTogetherIP != null) {
 		ytPlayer = document.getElementById("movie_player");
 		if (ytPlayer != undefined && !ytPlayerReady) {
 			ytPlayer.addEventListener("onStateChange", onPlayerStateChanged);
+			ytPlayer.addEventListener("onPlaybackRateChange", onPlaybackRateChanged);
 			ytPlayer.loadVideoById("0");
 			ytPlayerReady = true;
 		}
