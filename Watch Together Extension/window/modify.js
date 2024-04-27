@@ -188,7 +188,7 @@ function onReceive(e) {
 					btnFrame.appendChild(btnRemove);
 				
 				$playlistContainer.appendChild(btnFrame);
-				playlist.push({ vID: videoID, overlayObj: playingOverlay });
+				playlist.push({ vID: videoID, obj: btnFrame, overlayObj: playingOverlay });
 				
 				// write video title and author
 				let cacheData = cacheVideoInfo[videoID];
@@ -354,6 +354,21 @@ if (watchTogetherIP != null) {
 	var $ipInfo = document.createElement("label");
 	$ipInfo.id = "connecting-ip";
 	
+	let playlistControlFrame = document.createElement("div");
+	playlistControlFrame.id = "playlist-control";
+	
+		let whereButton = document.createElement("button");
+		whereButton.innerHTML = "where";
+		whereButton.addEventListener("click", function() {
+			if (playingID < 0)
+				return;
+			playlist[playingID].obj.scrollIntoView({
+				behavior: "smooth",
+				block: "nearest"
+			});
+		});
+		playlistControlFrame.appendChild(whereButton);
+	
 	var $playlistContainer = document.createElement("div");
 	$playlistContainer.id = "playlist";
 	
@@ -518,6 +533,7 @@ if (watchTogetherIP != null) {
 		let tmpElement = rightFrame;
 		rightFrame = rightFrame.parentElement;
 		rightFrame.removeChild(tmpElement);
+		rightFrame.appendChild(playlistControlFrame);
 		rightFrame.appendChild($playlistContainer);
 		
 		belowFrame.style.visibility = "hidden";

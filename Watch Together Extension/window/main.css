@@ -65,7 +65,14 @@ body.inheritCursors * {
 }
 
 
+#playlist-control {
+  width: 400px;
+  display: flex;
+  justify-content: center;
+}
+
 #playlist {
+  margin-top: 10px;
   margin-left: 10px;
   width: 400px;
   height: 800px;
