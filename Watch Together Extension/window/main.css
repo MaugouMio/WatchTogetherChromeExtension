@@ -83,13 +83,15 @@ body.inheritCursors * {
   justify-content: center;
 }
 #where-button {
-  margin-right: 40px;
+  margin-right: 10px;
+}
+#clear-button {
+  margin-right: 50px;
 }
 .play-mode-toggle {
-  margin-left: 10px;
+  margin-right: 10px;
 }
 .play-mode-toggle.active {
-  margin-left: 10px;
   border: 2px solid yellow;
 }
 

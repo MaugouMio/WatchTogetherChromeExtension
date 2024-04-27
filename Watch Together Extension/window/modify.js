@@ -218,8 +218,10 @@ function onReceive(e) {
 			if (ytPlayerReady) {
 				if (playingID < 0) {
 					// stop current playing video
-					if (ytPlayer.getPlayerState() == YTPlayerState.PLAYING || ytPlayer.getPlayerState() == YTPlayerState.PAUSED)
-						ytPlayer.seekTo(ytPlayer.getDuration(), true);
+					if (ytPlayer.getPlayerState() == YTPlayerState.PLAYING || ytPlayer.getPlayerState() == YTPlayerState.PAUSED) {
+						ytPlayer.seekTo(0);
+						ytPlayer.cancelPlayback();
+					}
 				}
 				else if (!msg.update_only)
 					ytPlayer.cueVideoById(playlist[playingID].vID);
@@ -390,6 +392,14 @@ if (watchTogetherIP != null) {
 			});
 		});
 		playlistControlFrame.appendChild(whereButton);
+	
+		let clearButton = document.createElement("button");
+		clearButton.id = "clear-button";
+		clearButton.innerHTML = "clear";
+		clearButton.addEventListener("click", function() {
+			sendMsg({"type": "clear"});
+		});
+		playlistControlFrame.appendChild(clearButton);
 	
 		var loopButton = document.createElement("button");
 		loopButton.className = "play-mode-toggle";

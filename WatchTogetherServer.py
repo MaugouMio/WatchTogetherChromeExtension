@@ -199,6 +199,13 @@ async def process(websocket, path):
 					playlist[to_id] = targetVideo
 					# broadcast new playlist
 					await asyncio.wait([asyncio.create_task(user.send(GetListPacket(current_id, playlist))) for user in USERS])
+		elif protocol == "clear":
+			playlist.clear()
+			start_time = 0
+			pause_time = 0
+			current_id = -1
+			# broadcast new playlist and force load new video
+			await asyncio.wait([asyncio.create_task(user.send(GetListPacket(current_id, playlist, False))) for user in USERS])
 		
 		elif protocol == "search":
 			try:
