@@ -20,6 +20,7 @@ var ytPlayerReady = false;
 
 var videoFailReasonCheck = 0;
 var isFirstLoad = false;
+var bufferStartTime = 0;
 
 var searchResultType = -1;  // 0 = video, 1 = playlist
 var searchResultVideoID = undefined;
@@ -310,7 +311,7 @@ function onReceive(e) {
 function onPlayerStateChanged(e) {
 	if (playingID < 0)
 		return;
-	
+	console.log(e);
 	if (videoFailReasonCheck > 0) {
 		clearInterval(videoFailReasonCheck);
 		videoFailReasonCheck = 0;
@@ -337,9 +338,9 @@ function onPlayerStateChanged(e) {
 			break;
 		case YTPlayerState.PLAYING:
 			// ignore play events just after the server called play
-			if (Math.abs(serverCallPlayTime - Date.now()) > 200) {
-				if (isFirstLoad) {
-					isFirstLoad = false;
+			let timeNow = Date.now();
+			if (timeNow - serverCallPlayTime > 200) {
+				if (isFirstLoad || (bufferStartTime > 0 && timeNow - bufferStartTime > 500)) {
 					if (serverPaused) {
 						ytPlayer.seekTo(serverPlayTime, true);
 						ytPlayer.pauseVideo();
@@ -350,6 +351,8 @@ function onPlayerStateChanged(e) {
 				else
 					sendMsg({"type": "play", "id": playingID, "time": ytPlayer.getCurrentTime()});
 			}
+			isFirstLoad = false;
+			bufferStartTime = 0;
 			break;
 		case YTPlayerState.UNLOADED:
 			videoFailReasonCheck = setInterval(() => {
@@ -364,6 +367,9 @@ function onPlayerStateChanged(e) {
 					// videoFailReasonCheck = 0;
 				// }
 			}, 50);
+			break;
+		case YTPlayerState.BUFFERING:
+			bufferStartTime = Date.now();
 			break;
 	}
 }
