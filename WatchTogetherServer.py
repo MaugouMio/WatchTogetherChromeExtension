@@ -139,7 +139,6 @@ async def process(websocket, path):
 					# broadcast seek to start
 					await asyncio.wait([asyncio.create_task(user.send(GetPlayPacket(current_id, 0, playback_rate, False))) for user in USERS])
 				else:
-					keep_playing = True
 					if playmode == PLAYMODE["RANDOM"]:
 						tempList = list(range(len(playlist)))
 						tempList[current_id], tempList[-1] = tempList[-1], tempList[current_id]
@@ -149,14 +148,12 @@ async def process(websocket, path):
 						if current_id >= len(playlist):
 							if playmode == PLAYMODE["DEFAULT"]:
 								current_id = -1  # stop playing
-								keep_playing = False
 							elif playmode == PLAYMODE["LOOP"]:
 								current_id = 0
 					
-					if keep_playing:
-						# delay a little bit and broadcast the next video load msg
-						await asyncio.sleep(2)
-						await asyncio.wait([asyncio.create_task(user.send(GetLoadPacket(current_id))) for user in USERS])
+					# delay a little bit and broadcast the next video load msg
+					await asyncio.sleep(2)
+					await asyncio.wait([asyncio.create_task(user.send(GetLoadPacket(current_id))) for user in USERS])
 					
 		elif protocol == "add":
 			playlist.append(data["vid"])

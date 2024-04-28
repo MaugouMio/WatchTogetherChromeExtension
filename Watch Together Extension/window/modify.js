@@ -243,7 +243,10 @@ function onReceive(e) {
 				else
 					playlist[i].overlayObj.style.visibility = "hidden";
 			}
-			ytPlayer.cueVideoById(playlist[playingID].vID);
+			if (playingID >= 0)
+				ytPlayer.cueVideoById(playlist[playingID].vID);
+			else
+				ytPlayer.cueVideoById("0");
 			break;
 			
 		case "play":
