@@ -1,5 +1,6 @@
 const $ipInput = document.querySelector('#ip-input');
-const $button = document.querySelector('#connectButton');
+const $nameInput = document.querySelector('#name-input');
+const $button = document.querySelector('#connect-button');
 
 // process user input and save to storage
 $ipInput.addEventListener('input', (e) => {
@@ -14,6 +15,11 @@ async function fetchData() {
 			$ipInput.value = "127.0.0.1:5555";
 		else
 			$ipInput.value = storage.cacheIP;
+		
+		if (storage.cacheName === undefined)
+			$nameInput.value = "Anonymous";
+		else
+			$nameInput.value = storage.cacheName;
 	});
 }
 window.onload = () => {
@@ -25,7 +31,8 @@ window.onload = () => {
 document.addEventListener('DOMContentLoaded', function() {
     $button.addEventListener('click', function() {
 		chrome.storage.sync.set({ cacheIP: $ipInput.value });  // always save content before connect
+		chrome.storage.sync.set({ cacheName: $nameInput.value });  // always save content before connect
         // window.location.href = "./main.html";
-		chrome.tabs.update({url:`https://www.youtube.com/watch?v=6zg0JvlpYZ4&watchTogetherIP=${$ipInput.value}`});
+		chrome.tabs.update({url:`https://www.youtube.com/watch?v=6zg0JvlpYZ4&watchTogetherIP=${$ipInput.value}&nickname=${$nameInput.value}`});
     });
 });

@@ -10,6 +10,40 @@ body.inheritCursors * {
   font-size: 20px;
 }
 
+#fold-user-button {
+  position: fixed;
+  bottom: 0;
+  left: 80px;
+  width: 40px;
+  height: 20px;
+  font-size: 20px;
+  font-style: bold;
+}
+#user-list {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 200px;
+  height: 0;
+  background-color: #333;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.user {
+  width: 180px;
+  height: 20px;
+  overflow: hidden;
+  text-align: left;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  text-overflow: ellipsis;
+  font-size: 15px;
+  border: 1px solid;
+}
+.user.self {
+  background-color: #666;
+}
+
 #copy-url-button {
   width: 100px;
   height: 25px;

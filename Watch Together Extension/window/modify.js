@@ -37,6 +37,10 @@ var serverPlaybackRate = 1;
 var serverSelfLoop = false;
 var cacheVideoInfo = {};
 
+var userList;
+var selfUserID;
+var userListFolded = true;
+
 var draggingIdx = -1;
 var draggingObj = null;
 var dragLastEnter = null;
@@ -114,14 +118,6 @@ function videoRightClick(e) {
 
 // ============= WebSocket server protocol ============= //
 
-// on WebSocket connected
-function onConnected() {
-	$ipInfo.innerHTML = "Connected to " + watchTogetherIP;
-};
-// on WebSocket connect failed
-function onConnectFailed() {
-	$ipInfo.innerHTML = "Can not connect to " + watchTogetherIP;
-};
 // send msg to WebSocket server
 function sendMsg(msg) {
 	if (ws === undefined)
@@ -130,6 +126,15 @@ function sendMsg(msg) {
 	var data = JSON.stringify(msg);
 	ws.send(data);
 }
+// on WebSocket connected
+function onConnected() {
+	$ipInfo.innerHTML = "Connected to " + watchTogetherIP;
+	sendMsg({"type": "name", "name": nickName});
+};
+// on WebSocket connect failed
+function onConnectFailed() {
+	$ipInfo.innerHTML = "Can not connect to " + watchTogetherIP;
+};
 // on receive WebSocket server msg
 function onReceive(e) {
 	var msg = JSON.parse(e.data);
@@ -307,6 +312,26 @@ function onReceive(e) {
 				ytPlayer.setLoopVideo(serverSelfLoop);
 			}
 			break;
+			
+		case "userlist":
+			userList = msg.list;
+			userList.sort(function(a, b) {
+				return a.id - b.id;
+			});
+			
+			if (msg.self >= 0)
+				selfUserID = msg.self;
+			
+			userListFrame.innerHTML = "";
+			for (let i = 0; i < userList.length; i++) {
+				let userElement = document.createElement("div");
+				userElement.classList.add("user");
+				userElement.innerHTML = `[${userList[i].id}] ${userList[i].name}`;
+				if (userList[i].id == selfUserID)
+					userElement.classList.add("self");
+				userListFrame.appendChild(userElement);
+			}
+			break;
 	}
 };
 
@@ -400,19 +425,42 @@ function onLoopChanged(e) {
 
 
 function getParameterValue(parameterName) {
+	var params = {};
     var query = window.location.search.substring(1);
     var vars = query.split('&');
     for (var i = 0; i < vars.length; i++) {
         var pair = vars[i].split('=');
-        if (decodeURIComponent(pair[0]) == parameterName) {
-            return decodeURIComponent(pair[1]);
-        }
+		params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1]);
     }
-    return null;
+	return params;
 }
-var watchTogetherIP = getParameterValue("watchTogetherIP");
+var urlParams = getParameterValue();
+var watchTogetherIP = urlParams["watchTogetherIP"];
+var nickName = urlParams["nickname"];
 if (watchTogetherIP != null) {
 	// Inject some HTML elements =======================================================
+	
+	var userListFrame = document.createElement("div");
+	userListFrame.id = "user-list";
+	
+	var foldUserListButton = document.createElement("button");
+	foldUserListButton.id = "fold-user-button";
+	foldUserListButton.innerHTML = "︿";
+	foldUserListButton.addEventListener("click", function() {
+		if (userListFolded) {
+			foldUserListButton.innerHTML = "﹀";
+			let frameHeight = "200px";
+			userListFrame.style.height = frameHeight;
+			foldUserListButton.style.bottom = frameHeight;
+			userListFolded = false;
+		}
+		else {
+			foldUserListButton.innerHTML = "︿";
+			userListFrame.style.height = "0";
+			foldUserListButton.style.bottom = "0";
+			userListFolded = true;
+		}
+	});
 	
 	var $ipInfo = document.createElement("label");
 	$ipInfo.id = "connecting-ip";
@@ -620,6 +668,9 @@ if (watchTogetherIP != null) {
 		let sizeControlButton = document.getElementsByClassName("ytp-size-button")[0];
 		if (!ytPlayer || !htmlVideo || !rightFrame || !topBar || !belowFrame || !nextButton || !miniPlayerButton || !sizeControlButton)
 			return;
+		
+		document.body.appendChild(foldUserListButton);
+		document.body.appendChild(userListFrame);
 		
 		topBar.innerHTML = "";
 		topBar.appendChild($ipInfo);

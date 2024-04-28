@@ -7,8 +7,16 @@
 label {
   display: block;
 }
-textarea {
+#ip-input {
   width: 100%;
   margin: 0;
   resize: none;
+}
+#name-input {
+  width: 150px;
+  margin: 0;
+  resize: none;
+}
+#connect-button {
+  margin-top: 5px;
 }
