@@ -255,7 +255,7 @@ function onReceive(e) {
 			serverCallPlayTime = Date.now();
 			serverPlayTime = msg.time;
 			if (Math.abs(ytPlayer.getCurrentTime() - serverPlayTime) > 0.5)
-				ytPlayer.seekTo(serverPlayTime, true);
+				ytPlayer.seekTo(Math.min(serverPlayTime, ytPlayer.getDuration() - 1), true);
 			
 			serverPlaybackRate = msg.rate;
 			if (Math.abs(ytPlayer.getPlaybackRate() - serverPlaybackRate) > 0.01)
@@ -346,7 +346,7 @@ function onPlayerStateChanged(e) {
 						ytPlayer.pauseVideo();
 					}
 					else
-						ytPlayer.seekTo(serverPlayTime + (Date.now() - serverCallPlayTime) / 1000 * serverPlaybackRate, true);
+						ytPlayer.seekTo(Math.min(serverPlayTime + (Date.now() - serverCallPlayTime) / 1000 * serverPlaybackRate, ytPlayer.getDuration() - 1), true);
 				}
 				else
 					sendMsg({"type": "play", "id": playingID, "time": ytPlayer.getCurrentTime()});
