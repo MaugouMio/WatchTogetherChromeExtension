@@ -145,7 +145,8 @@ function onReceive(e) {
 			playingID = msg.id;
 			playlist = [];
 			for (let i = 0; i < msg.playlist.length; i++) {
-				const videoID = msg.playlist[i];
+				const videoID = msg.playlist[i].vid;
+				const userName = msg.playlist[i].user;
 				
 				var btnFrame = document.createElement("div");
 				btnFrame.className = "playlist-item";
@@ -178,7 +179,7 @@ function onReceive(e) {
 						
 							let title = document.createElement("p");
 							title.className = "playlist-item-info-text";
-							title.style.height = "80%";
+							title.style.height = "60%";
 							infoFrame.appendChild(title);
 							
 							let author = document.createElement("p");
@@ -186,6 +187,13 @@ function onReceive(e) {
 							author.style.height = "20%";
 							author.style["text-wrap"] = "nowrap";
 							infoFrame.appendChild(author);
+							
+							let fromUser = document.createElement("p");
+							fromUser.className = "playlist-item-info-text";
+							fromUser.style.height = "20%";
+							fromUser.style["text-wrap"] = "nowrap";
+							fromUser.innerHTML = userName;
+							infoFrame.appendChild(fromUser);
 					
 					let playingOverlay = document.createElement("div");
 					playingOverlay.className = "playing-overlay";

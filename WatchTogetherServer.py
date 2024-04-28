@@ -34,7 +34,10 @@ start_time = 0
 pause_time = 0
 playback_rate = 1
 self_loop = False
-playlist = [ "3cJzGD9xkzg", "lAM3diipp7Y" ]
+playlist = [
+	{"vid": "3cJzGD9xkzg", "user": "server"},
+	{"vid": "lAM3diipp7Y", "user": "server"}
+]
 playlist_info_cache = {}
 playmode = PLAYMODE["DEFAULT"]
 user_idx = 0
@@ -171,14 +174,16 @@ async def process(websocket, path):
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 					
 		elif protocol == "add":
-			playlist.append(data["vid"])
+			playlist.append({"vid": data["vid"], "user": USERS[websocket]["name"]})
 			# broadcast new playlist
 			packet = GetListPacket(current_id, playlist)
 			await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 		elif protocol == "add_list":
 			list_id = data["lid"]
 			if list_id in playlist_info_cache:
-				playlist += playlist_info_cache[list_id]["list"]
+				user_name = USERS[websocket]["name"]
+				for vid in playlist_info_cache[list_id]["list"]:
+					playlist.append({"vid": vid, "user": user_name})
 				# broadcast new playlist
 				packet = GetListPacket(current_id, playlist)
 				await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
