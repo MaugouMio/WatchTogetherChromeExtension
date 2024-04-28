@@ -33,6 +33,7 @@ var serverPlayTime = -1;
 var serverPaused = false;
 var serverPlayMode = PlayMode.DEFAULT;
 var serverPlaybackRate = 1;
+var serverSelfLoop = false;
 var cacheVideoInfo = {};
 
 var draggingIdx = -1;
@@ -285,17 +286,22 @@ function onReceive(e) {
 			break;
 			
 		case "playmode":
-			serverPlayMode = msg.mode;
-			
-			if (serverPlayMode == PlayMode.LOOP)
-				loopButton.classList.add("active");
-			else
-				loopButton.classList.remove("active");
-			
-			if (serverPlayMode == PlayMode.RANDOM)
-				randomButton.classList.add("active");
-			else
-				randomButton.classList.remove("active");
+			if (serverPlayMode != msg.mode) {
+				serverPlayMode = msg.mode;
+				if (serverPlayMode == PlayMode.LOOP)
+					loopButton.classList.add("active");
+				else
+					loopButton.classList.remove("active");
+				
+				if (serverPlayMode == PlayMode.RANDOM)
+					randomButton.classList.add("active");
+				else
+					randomButton.classList.remove("active");
+			}
+			if (serverSelfLoop != msg.self_loop) {
+				serverSelfLoop = msg.self_loop;
+				ytPlayer.setLoopVideo(serverSelfLoop);
+			}
 			break;
 	}
 };
@@ -370,6 +376,16 @@ function onPlaybackRateChanged(e) {
 		return;
 	
 	sendMsg({"type": "rate", "rate": e});
+}
+
+// Youtube self loop state changed
+function onLoopChanged(e) {
+	if (playingID < 0)
+		return;
+	if (e == serverSelfLoop)
+		return;
+	
+	sendMsg({"type": "loop", "state": e});
 }
 
 
@@ -581,6 +597,7 @@ if (watchTogetherIP != null) {
 		if (ytPlayer != undefined && !ytPlayerReady) {
 			ytPlayer.addEventListener("onStateChange", onPlayerStateChanged);
 			ytPlayer.addEventListener("onPlaybackRateChange", onPlaybackRateChanged);
+			ytPlayer.addEventListener("onLoopChange", onLoopChanged);
 			ytPlayer.loadVideoById("0");
 			ytPlayerReady = true;
 		}
