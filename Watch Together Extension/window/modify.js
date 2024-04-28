@@ -637,7 +637,7 @@ if (watchTogetherIP != null) {
 		
 		// stop the video before it ends to avoid autoplay
 		htmlVideo.ontimeupdate = () => {
-			if (ytPlayer.getPlayerState() == YTPlayerState.PLAYING && htmlVideo.duration - htmlVideo.currentTime < 0.3) {
+			if (ytPlayer.getPlayerState() == YTPlayerState.PLAYING && htmlVideo.duration - htmlVideo.currentTime < 0.5) {
 				sendMsg({"type": "end", "id": playingID});
 				ytPlayer.cancelPlayback();
 			}
