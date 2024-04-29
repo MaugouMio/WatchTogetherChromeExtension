@@ -275,7 +275,7 @@ async def process(websocket, path):
 					if "playlistCustomThumbnailRenderer" in thumbnailData:  # has custom thumbnail for playlist
 						icon_url = thumbnailData["playlistCustomThumbnailRenderer"]["thumbnail"]["thumbnails"][-1]["url"]
 					else:  # use first video thumbnail
-						icon_url = f"https://i.ytimg.com/vi/{videoID}/mqdefault.jpg"
+						icon_url = f"https://i.ytimg.com/vi/{video_id_list[0]}/mqdefault.jpg"
 						
 					playlist_info_cache[playlist_id] = { "id": playlist_id, "title": playlist_title, "icon": icon_url, "list": video_id_list }
 				
