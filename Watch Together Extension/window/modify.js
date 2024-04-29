@@ -18,7 +18,6 @@ var ytPlayer;
 var htmlVideo;
 var ytPlayerReady = false;
 
-var videoFailReasonCheck = 0;
 var isFirstLoad = false;
 var bufferStartTime = 0;
 
@@ -347,11 +346,7 @@ function onReceive(e) {
 function onPlayerStateChanged(e) {
 	if (playingID < 0)
 		return;
-	console.log(e);
-	if (videoFailReasonCheck > 0) {
-		clearInterval(videoFailReasonCheck);
-		videoFailReasonCheck = 0;
-	}
+	
 	switch (e) {
 		case YTPlayerState.CUED:
 			sendMsg({"type": "ready", "id": playingID});
@@ -390,20 +385,8 @@ function onPlayerStateChanged(e) {
 			isFirstLoad = false;
 			bufferStartTime = 0;
 			break;
-		case YTPlayerState.UNLOADED:
-			videoFailReasonCheck = setInterval(() => {
-				if (document.getElementsByClassName("ytp-error")[0]) {
-					sendMsg({"type": "end", "id": playingID});
-					clearInterval(videoFailReasonCheck);
-					videoFailReasonCheck = 0;
-				}
-				// if (document.querySelector("div.ad-showing")) {
-					// wasAdPlaying = true;
-					// clearInterval(videoFailReasonCheck);
-					// videoFailReasonCheck = 0;
-				// }
-			}, 50);
-			break;
+		// case YTPlayerState.UNLOADED:
+			// break;
 		case YTPlayerState.BUFFERING:
 			bufferStartTime = Date.now();
 			break;
@@ -428,6 +411,14 @@ function onLoopChanged(e) {
 		return;
 	
 	sendMsg({"type": "loop", "state": e});
+}
+
+// Youtube video can not play
+function onVideoError(e) {
+	if (playingID < 0)
+		return;
+	
+	sendMsg({"type": "end", "id": playingID});
 }
 
 
@@ -663,6 +654,7 @@ if (watchTogetherIP != null) {
 			ytPlayer.addEventListener("onStateChange", onPlayerStateChanged);
 			ytPlayer.addEventListener("onPlaybackRateChange", onPlaybackRateChanged);
 			ytPlayer.addEventListener("onLoopChange", onLoopChanged);
+			ytPlayer.addEventListener("onError", onVideoError);
 			ytPlayer.loadVideoById("0");
 			ytPlayerReady = true;
 		}
