@@ -306,13 +306,13 @@ function onReceive(e) {
 				break;
 			}
 			
-			$searchResultFrame.style.visibility = "visible";
-			
 			$searchResultImg.src = msg.icon;
 			$searchResultTitle.innerHTML = msg.title;
 			$searchResultAuthor.innerHTML = msg.len + " clip(s)";
 			searchResultPlaylistID = msg.id;
 			searchResultType = 1;
+			
+			showSearchResult();
 			break;
 			
 		case "playmode":
@@ -447,6 +447,14 @@ function onVideoError(e) {
 
 
 
+function showSearchResult() {
+	$searchResultFrame.style.visibility = "visible";
+	$searchResultAuthor.scrollIntoView({
+		behavior: "smooth",
+		block: "end"
+	});
+}
+
 function getParameterValue(parameterName) {
 	var params = {};
     var query = window.location.search.substring(1);
@@ -573,7 +581,6 @@ if (watchTogetherIP != null) {
 				fetch(`https://noembed.com/embed?dataType=json&url=${$urlInput.value}`)
 					.then(res => res.json())
 					.then(data => {
-						$searchResultFrame.style.visibility = "visible";
 						$searchResultImg.src = imageUrl;
 						$searchResultTitle.innerHTML = data.title;
 						$searchResultAuthor.innerHTML = data.author_name;
@@ -581,16 +588,18 @@ if (watchTogetherIP != null) {
 						searchResultVideoID = vID;
 						// cache data for less html request
 						cacheVideoInfo[vID] = { title: data.title, author: data.author_name };
+						
+						showSearchResult();
 					});
 			}
 			else {
-				$searchResultFrame.style.visibility = "visible";
-				
 				$searchResultImg.src = imageUrl;
 				$searchResultTitle.innerHTML = cacheData.title;
 				$searchResultAuthor.innerHTML = cacheData.author;
 				searchResultType = 0;
 				searchResultVideoID = vID;
+				
+				showSearchResult();
 			}
 			$urlInput.value = "";
 		});
