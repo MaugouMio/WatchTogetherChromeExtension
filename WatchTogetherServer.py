@@ -35,8 +35,8 @@ pause_time = 0
 playback_rate = 1
 self_loop = False
 playlist = [
-	{"vid": "3cJzGD9xkzg", "user": "server"},
-	{"vid": "lAM3diipp7Y", "user": "server"}
+	{"vid": "3cJzGD9xkzg", "user": "server", "invalid": ""},
+	{"vid": "lAM3diipp7Y", "user": "server", "invalid": ""}
 ]
 playlist_info_cache = {}
 playmode = PLAYMODE["DEFAULT"]
@@ -90,6 +90,13 @@ def GetUserListPacket(userlist, self_id = -1):
 		"list": userlist,
 		"self": self_id
 	})
+# video invalid by specific user
+def GetInvalidPacket(play_id, by):
+	return json.dumps({
+		"type": "invalid",
+		"id": play_id,
+		"by": by
+	})
 
 
 
@@ -139,6 +146,12 @@ async def process(websocket, path):
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 		elif protocol == "play":
 			if data["id"] == current_id:
+				if "invalid" in playlist[current_id]:
+					playlist[current_id]["invalid"] = ""
+					# broadcast video invalid state
+					packet = GetInvalidPacket(current_id, "")
+					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
+					
 				client_played_time = data["time"]
 				current_time = time.time()
 				if pause_time > 0 or abs((client_played_time / playback_rate) - (current_time - start_time)) > 1:  # 1 second diff tolerant
@@ -149,6 +162,13 @@ async def process(websocket, path):
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 		elif protocol == "end":
 			if data["id"] == current_id:
+				if "error" in data:
+					invalid_by_user = USERS[websocket]["name"]
+					playlist[current_id]["invalid"] = invalid_by_user
+					# broadcast video invalid state
+					packet = GetInvalidPacket(current_id, invalid_by_user)
+					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
+					
 				start_time = 0
 				pause_time = 0
 				if self_loop:
@@ -174,7 +194,7 @@ async def process(websocket, path):
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 					
 		elif protocol == "add":
-			playlist.append({"vid": data["vid"], "user": USERS[websocket]["name"]})
+			playlist.append({"vid": data["vid"], "user": USERS[websocket]["name"], "invalid": ""})
 			# broadcast new playlist
 			packet = GetListPacket(current_id, playlist)
 			await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
@@ -183,7 +203,7 @@ async def process(websocket, path):
 			if list_id in playlist_info_cache:
 				user_name = USERS[websocket]["name"]
 				for vid in playlist_info_cache[list_id]["list"]:
-					playlist.append({"vid": vid, "user": user_name})
+					playlist.append({"vid": vid, "user": user_name, "invalid": ""})
 				# broadcast new playlist
 				packet = GetListPacket(current_id, playlist)
 				await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])

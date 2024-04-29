@@ -134,6 +134,23 @@ function onConnected() {
 function onConnectFailed() {
 	$ipInfo.innerHTML = "Can not connect to " + watchTogetherIP;
 };
+
+function updatePlaylistOverlay(idx) {
+	if (idx == playingID) {
+		playlist[idx].overlayObj.style.visibility = "visible";
+		playlist[idx].overlayObj.style["text-decoration"] = null;
+		playlist[idx].overlayObj.innerHTML = "playing";
+	}
+	else {
+		if (playlist[idx].invalid == "")
+			playlist[idx].overlayObj.style.visibility = "hidden";
+		else {
+			playlist[idx].overlayObj.style.visibility = "visible";
+			playlist[idx].overlayObj.style["text-decoration"] = "line-through";
+			playlist[idx].overlayObj.innerHTML = playlist[idx].invalid;
+		}
+	}
+}
 // on receive WebSocket server msg
 function onReceive(e) {
 	var msg = JSON.parse(e.data);
@@ -146,6 +163,7 @@ function onReceive(e) {
 			for (let i = 0; i < msg.playlist.length; i++) {
 				const videoID = msg.playlist[i].vid;
 				const userName = msg.playlist[i].user;
+				const invalidUser = msg.playlist[i].invalid;
 				
 				var btnFrame = document.createElement("div");
 				btnFrame.className = "playlist-item";
@@ -163,7 +181,8 @@ function onReceive(e) {
 					let btn = document.createElement("button");
 					btn.className = "playlist-item-button";
 					btn.addEventListener('click', function() {
-						sendMsg({"type": "load", "id": i});
+						if (i != playingID)
+							sendMsg({"type": "load", "id": i});
 					});
 					btnFrame.appendChild(btn);
 					
@@ -196,9 +215,6 @@ function onReceive(e) {
 					
 					let playingOverlay = document.createElement("div");
 					playingOverlay.className = "playing-overlay";
-					playingOverlay.innerHTML = "playing";
-					if (playingID == i)
-						playingOverlay.style.visibility = "visible";
 					btnFrame.appendChild(playingOverlay);
 					
 					let btnRemove = document.createElement("button");
@@ -210,7 +226,8 @@ function onReceive(e) {
 					btnFrame.appendChild(btnRemove);
 				
 				$playlistContainer.appendChild(btnFrame);
-				playlist.push({ vID: videoID, obj: btnFrame, overlayObj: playingOverlay });
+				playlist.push({ vID: videoID, obj: btnFrame, overlayObj: playingOverlay, invalid: invalidUser });
+				updatePlaylistOverlay(i);
 				
 				// write video title and author
 				let cacheData = cacheVideoInfo[videoID];
@@ -249,12 +266,9 @@ function onReceive(e) {
 			
 			playingID = msg.id;
 			// update playing notation
-			for (let i = 0; i < playlist.length; i++) {
-				if (i == playingID)
-					playlist[i].overlayObj.style.visibility = "visible";
-				else
-					playlist[i].overlayObj.style.visibility = "hidden";
-			}
+			for (let i = 0; i < playlist.length; i++)
+				updatePlaylistOverlay(i);
+			
 			if (playingID >= 0)
 				ytPlayer.cueVideoById(playlist[playingID].vID);
 			else
@@ -339,6 +353,16 @@ function onReceive(e) {
 				userListFrame.appendChild(userElement);
 			}
 			break;
+			
+		case "invalid":
+		{
+			let updateID = msg.id;
+			playlist[updateID].invalid = msg.by;
+			// update overlay text
+			if (updateID != playingID)
+				updatePlaylistOverlay(updateID);
+				
+		}	break;
 	}
 };
 
@@ -418,7 +442,7 @@ function onVideoError(e) {
 	if (playingID < 0)
 		return;
 	
-	sendMsg({"type": "end", "id": playingID});
+	sendMsg({"type": "end", "id": playingID, "error": true});
 }
 
 

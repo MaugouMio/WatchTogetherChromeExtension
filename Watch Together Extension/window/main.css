@@ -177,12 +177,12 @@ body.inheritCursors * {
   left: -300px;
   position: relative;
   background-color: rgba(0,0,0,0.5);
-  visibility: hidden;
   display: grid;
   align-items: center;
   text-align: center;
   font-size: 40px;
   cursor: pointer;
+  pointer-events: none;
 }
 .playlist-remove {
   left: -290px;
