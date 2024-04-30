@@ -84,11 +84,10 @@ def GetPlayModePacket(mode, loop):
 		"self_loop": loop
 	})
 # user list
-def GetUserListPacket(userlist, self_id = -1):
+def GetUserListPacket(userlist):
 	return json.dumps({
 		"type": "userlist",
-		"list": userlist,
-		"self": self_id
+		"list": userlist
 	})
 # video invalid by specific user
 def GetInvalidPacket(play_id, by):
@@ -96,6 +95,12 @@ def GetInvalidPacket(play_id, by):
 		"type": "invalid",
 		"id": play_id,
 		"by": by
+	})
+# notify user the id of himself
+def GetUserIDPacket(id):
+	return json.dumps({
+		"type": "uid",
+		"id": id
 	})
 
 
@@ -117,6 +122,7 @@ async def process(websocket, path):
 	
 	await websocket.send(GetListPacket(current_id, playlist, False))
 	await websocket.send(GetPlayModePacket(playmode, self_loop))
+	await websocket.send(GetUserIDPacket(USERS[websocket]["id"]))
 	async for message in websocket:
 		data = json.loads(message)
 		print(data)
@@ -314,7 +320,7 @@ async def process(websocket, path):
 		elif protocol == "name":
 			USERS[websocket]["name"] = data["name"]
 			# broadcast to all users
-			packet = GetUserListPacket(list(USERS.values()), USERS[websocket]["id"])
+			packet = GetUserListPacket(list(USERS.values()))
 			await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 		
 	del USERS[websocket]

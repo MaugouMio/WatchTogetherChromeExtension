@@ -334,14 +334,15 @@ function onReceive(e) {
 			}
 			break;
 			
+		case "uid":
+			selfUserID = msg.id;
+			break;
+			
 		case "userlist":
 			userList = msg.list;
 			userList.sort(function(a, b) {
 				return a.id - b.id;
 			});
-			
-			if (msg.self >= 0)
-				selfUserID = msg.self;
 			
 			userListFrame.innerHTML = "";
 			for (let i = 0; i < userList.length; i++) {
