@@ -349,8 +349,10 @@ function onReceive(e) {
 				let userElement = document.createElement("div");
 				userElement.classList.add("user");
 				userElement.innerHTML = `[${userList[i].id}] ${userList[i].name}`;
-				if (userList[i].id == selfUserID)
+				if (userList[i].id == selfUserID) {
 					userElement.classList.add("self");
+					nickName = userList[i].name;
+				}
 				userListFrame.appendChild(userElement);
 			}
 			break;
@@ -475,6 +477,23 @@ if (watchTogetherIP != null) {
 	var userListFrame = document.createElement("div");
 	userListFrame.id = "user-list";
 	
+	var renameFrame = document.createElement("div");
+	renameFrame.id = "rename-frame";
+	
+		let renameInput = document.createElement("textarea");
+		renameInput.id = "rename-input";
+		renameInput.value = nickName;
+		renameFrame.appendChild(renameInput);
+		
+		let renameButton = document.createElement("button");
+		renameButton.id = "rename-button";
+		renameButton.innerHTML = "rename";
+		renameButton.addEventListener("click", function() {
+			if (renameInput.value != nickName)
+				sendMsg({"type": "name", "name": renameInput.value});
+		});
+		renameFrame.appendChild(renameButton);
+	
 	var foldUserListButton = document.createElement("button");
 	foldUserListButton.id = "fold-user-button";
 	foldUserListButton.innerHTML = "︿";
@@ -482,13 +501,15 @@ if (watchTogetherIP != null) {
 		if (userListFolded) {
 			foldUserListButton.innerHTML = "﹀";
 			let frameHeight = "200px";
-			userListFrame.style.height = frameHeight;
+			userListFrame.style.visibility = "visible";
+			renameFrame.style.visibility = "visible";
 			foldUserListButton.style.bottom = frameHeight;
 			userListFolded = false;
 		}
 		else {
 			foldUserListButton.innerHTML = "︿";
-			userListFrame.style.height = "0";
+			userListFrame.style.visibility = "hidden";
+			renameFrame.style.visibility = "hidden";
 			foldUserListButton.style.bottom = "0";
 			userListFolded = true;
 		}
@@ -664,6 +685,9 @@ if (watchTogetherIP != null) {
 	
 	document.addEventListener("keydown", function(event) {
 		if (event.code == "KeyN" || event.code == "KeyI" || event.code == "KeyT") {  // Shift+N / I / T on youtube is nextVideo / miniPlayer / sizeControl
+			if (document.activeElement.tagName.toLowerCase() == "textarea")
+				return;
+			
 			event.preventDefault();
 			event.stopPropagation();
 		}
@@ -705,6 +729,7 @@ if (watchTogetherIP != null) {
 		
 		document.body.appendChild(foldUserListButton);
 		document.body.appendChild(userListFrame);
+		document.body.appendChild(renameFrame);
 		
 		topBar.innerHTML = "";
 		topBar.appendChild($ipInfo);

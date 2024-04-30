@@ -24,10 +24,12 @@ body.inheritCursors * {
   bottom: 0;
   left: 0;
   width: 200px;
-  height: 0;
+  height: 170px;
+  visibility: hidden;
   background-color: #333;
   overflow-x: hidden;
   overflow-y: auto;
+  padding-bottom: 30px;
 }
 .user {
   width: 180px;
@@ -42,6 +44,31 @@ body.inheritCursors * {
 }
 .user.self {
   background-color: #666;
+}
+
+#rename-frame {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 195px;
+  height: 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  visibility: hidden;
+}
+#rename-input {
+  width: 130px;
+  height: 23px;
+  padding: 0 5px;
+  overflow: hidden;
+  resize: none;
+  white-space: nowrap;
+}
+#rename-button {
+  width: 50px;
+  height: 25px;
+  padding: 0;
 }
 
 #copy-url-button {
