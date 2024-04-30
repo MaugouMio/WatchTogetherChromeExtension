@@ -27,12 +27,43 @@ window.onload = () => {
 	fetchData();
 }
 
+var verifyCount = 0;
 // connect button event
 document.addEventListener('DOMContentLoaded', function() {
     $button.addEventListener('click', function() {
 		chrome.storage.sync.set({ cacheIP: $ipInput.value });  // always save content before connect
 		chrome.storage.sync.set({ cacheName: $nameInput.value });  // always save content before connect
-        // window.location.href = "./main.html";
-		chrome.tabs.update({url:`https://www.youtube.com/watch?v=6zg0JvlpYZ4&watchTogetherIP=${$ipInput.value}&nickname=${$nameInput.value}`});
+		// test websocket connection
+		let ws = new WebSocket("wss://" + $ipInput.value);
+		ws.onerror = () => {
+			alert("Please accept connection on the next page and try again");
+			
+			verifyCount = 0;
+			chrome.tabs.create({ url: "https://" + $ipInput.value }, function(tab) {
+				function tabUpdateListener(tabId, changeInfo, updatedTab) {
+					if (tabId === tab.id && changeInfo.status === "complete") {
+						if (++verifyCount > 1) {
+							chrome.tabs.remove(tabId);
+							alert("Connection accepted!");
+						}
+					}
+				}
+				function tabRemoveListener(tabId, removeInfo) {
+					if (tabId === tab.id) {
+						chrome.tabs.onUpdated.removeListener(tabUpdateListener);
+						chrome.tabs.onRemoved.removeListener(tabRemoveListener);
+					}
+				}
+				
+				chrome.tabs.onUpdated.addListener(tabUpdateListener);
+				chrome.tabs.onRemoved.addListener(tabRemoveListener);
+			});
+		}
+		ws.onopen = () => {
+			ws.close();
+			
+			// window.location.href = "./main.html";
+			chrome.tabs.update({url:`https://www.youtube.com/watch?v=6zg0JvlpYZ4&watchTogetherIP=${$ipInput.value}&nickname=${$nameInput.value}`});
+		}
     });
 });

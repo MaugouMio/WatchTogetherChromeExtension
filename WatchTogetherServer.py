@@ -12,6 +12,8 @@ except:
 	os.system("pip3 install pytube")
 	import pytube
 
+import pathlib
+import ssl
 import asyncio
 import json
 import time
@@ -333,8 +335,12 @@ async def process(websocket, path):
 IP = "127.0.0.1"
 PORT = 5555
 
+ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+localhost_pem = pathlib.Path(__file__).with_name("localhost.pem")
+ssl_context.load_cert_chain(localhost_pem)
+
 async def main():
-	async with websockets.serve(process, IP, PORT):
+	async with websockets.serve(process, IP, PORT, ssl=ssl_context):
 		await asyncio.Future()  # run forever
 
 if __name__ == "__main__":

@@ -695,7 +695,7 @@ if (watchTogetherIP != null) {
 	window.onload = () => {
 		$ipInfo.innerHTML = "Connecting to " + watchTogetherIP;
 
-		ws = new WebSocket("ws://" + watchTogetherIP);
+		ws = new WebSocket("wss://" + watchTogetherIP);
 		ws.onopen = onConnected;
 		ws.onerror = onConnectFailed;
 		ws.onmessage = onReceive;
