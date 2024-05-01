@@ -202,19 +202,31 @@ async def process(websocket, path):
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 					
 		elif protocol == "add":
+			wasPlaylistEmpty = len(playlist) == 0
 			playlist.append({"vid": data["vid"], "user": USERS[websocket]["name"], "invalid": ""})
 			# broadcast new playlist
-			packet = GetListPacket(current_id, playlist)
-			await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
+			if wasPlaylistEmpty:
+				current_id = 0
+				packet = GetListPacket(current_id, playlist, False)
+				await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
+			else:
+				packet = GetListPacket(current_id, playlist)
+				await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 		elif protocol == "add_list":
 			list_id = data["lid"]
 			if list_id in playlist_info_cache:
+				wasPlaylistEmpty = len(playlist) == 0
 				user_name = USERS[websocket]["name"]
 				for vid in playlist_info_cache[list_id]["list"]:
 					playlist.append({"vid": vid, "user": user_name, "invalid": ""})
 				# broadcast new playlist
-				packet = GetListPacket(current_id, playlist)
-				await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
+				if wasPlaylistEmpty:
+					current_id = 0
+					packet = GetListPacket(current_id, playlist, False)
+					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
+				else:
+					packet = GetListPacket(current_id, playlist)
+					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 		elif protocol == "remove":
 			target_id = data["id"]
 			if target_id >= 0 and target_id < len(playlist):
