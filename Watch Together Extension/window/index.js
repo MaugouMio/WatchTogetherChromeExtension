@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
 						if (++verifyCount > 1) {
 							chrome.tabs.remove(tabId);
 							alert("Connection accepted!");
+							$button.click();
 						}
 					}
 				}
