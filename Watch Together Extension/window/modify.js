@@ -374,8 +374,11 @@ function onReceive(e) {
 
 // Youtube Player state changed
 function onPlayerStateChanged(e) {
-	if (playingID < 0)
+	if (playingID < 0) {
+		if (e == YTPlayerState.PLAYING)
+			ytPlayer.cueVideoById("0");
 		return;
+	}
 	
 	switch (e) {
 		case YTPlayerState.CUED:
