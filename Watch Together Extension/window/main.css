@@ -77,7 +77,8 @@ body.inheritCursors * {
   border: none;
   position: absolute;
   visibility: hidden;
-  background: #111
+  background: #111;
+  color: #fff;
 }
 #copy-url-button:hover {
   background: #999
