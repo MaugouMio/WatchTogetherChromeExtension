@@ -246,6 +246,9 @@ function onReceive(e) {
 					author.innerHTML = cacheData.author;
 				}
 			}
+			if (playlist.length == 0)
+				$playlistContainer.innerHTML = "Search and add videos to playlist";
+				
 			
 			if (ytPlayerReady) {
 				if (playingID < 0) {
