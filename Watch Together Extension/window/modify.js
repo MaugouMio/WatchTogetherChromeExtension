@@ -131,8 +131,13 @@ function onConnected() {
 	sendMsg({"type": "name", "name": nickName});
 };
 // on WebSocket connect failed
-function onConnectFailed() {
-	$ipInfo.innerHTML = "Can not connect to " + watchTogetherIP;
+// function onConnectFailed() {
+	// $ipInfo.innerHTML = "Can not connect to " + watchTogetherIP;
+// };
+// on WebSocket server closed
+function onServerClosed() {
+	alert("Remote server closed!");
+	history.back();
 };
 
 function updatePlaylistOverlay(idx) {
@@ -703,7 +708,8 @@ if (watchTogetherIP != null) {
 
 		ws = new WebSocket("wss://" + watchTogetherIP);
 		ws.onopen = onConnected;
-		ws.onerror = onConnectFailed;
+		ws.onerror = onServerClosed; //onConnectFailed;
+		ws.onclose = onServerClosed;
 		ws.onmessage = onReceive;
 	}
 	window.onbeforeunload = function() {
