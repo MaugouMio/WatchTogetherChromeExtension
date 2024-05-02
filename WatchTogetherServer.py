@@ -127,7 +127,7 @@ async def process(websocket, path):
 	await websocket.send(GetUserIDPacket(USERS[websocket]["id"]))
 	async for message in websocket:
 		data = json.loads(message)
-		print(data)
+		print("[{0}] {1}".format(USERS[websocket]["id"], data))
 		protocol = data["type"]
 		if protocol == "load":
 			current_id = data["id"]
