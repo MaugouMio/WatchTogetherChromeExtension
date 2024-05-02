@@ -27,6 +27,7 @@ body.inheritCursors * {
   height: 170px;
   visibility: hidden;
   background-color: #333;
+  color: #fff;
   overflow-x: hidden;
   overflow-y: auto;
   padding-bottom: 30px;
@@ -40,6 +41,7 @@ body.inheritCursors * {
   margin-bottom: 5px;
   text-overflow: ellipsis;
   font-size: 15px;
+  color: #fff;
   border: 1px solid;
 }
 .user.self {
@@ -142,25 +144,18 @@ body.inheritCursors * {
 #playlist-control {
   width: 400px;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
 }
-#where-button {
-  margin-left: 5px;
-  margin-right: 10px;
+.playlist-control-button {
+  margin: 0 5px;
 }
-#clear-button {
-  margin-right: 50px;
-}
-.play-mode-toggle {
-  margin-right: 10px;
-}
-.play-mode-toggle.active {
+.playlist-control-button.active {
   border: 2px solid yellow;
 }
 
 #playlist {
   margin-top: 10px;
-  margin-left: 10px;
+  margin-left: 5px;
   width: 390px;
   height: 760px;
   overflow-x: hidden;

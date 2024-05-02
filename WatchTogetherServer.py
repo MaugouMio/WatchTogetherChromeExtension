@@ -130,12 +130,13 @@ async def process(websocket, path):
 		print("[{0}] {1}".format(USERS[websocket]["id"], data))
 		protocol = data["type"]
 		if protocol == "load":
-			current_id = data["id"]
-			start_time = 0
-			pause_time = 0
-			# broadcast load video
-			packet = GetLoadPacket(current_id)
-			await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
+			if data["id"] >= 0 and data["id"] < len(playlist):
+				current_id = data["id"]
+				start_time = 0
+				pause_time = 0
+				# broadcast load video
+				packet = GetLoadPacket(current_id)
+				await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 		elif protocol == "ready":
 			if data["id"] == current_id:
 				if start_time == 0:

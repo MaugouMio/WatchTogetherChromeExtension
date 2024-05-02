@@ -13,6 +13,8 @@ const PlayMode = {
 	RANDOM: 2
 }
 
+var selfClosing = false;
+
 var initCheck;
 var ytPlayer;
 var htmlVideo;
@@ -136,6 +138,9 @@ function onConnected() {
 // };
 // on WebSocket server closed
 function onServerClosed() {
+	if (selfClosing)
+		return;
+	
 	alert("Remote server closed!");
 	history.back();
 };
@@ -532,48 +537,64 @@ if (watchTogetherIP != null) {
 	let playlistControlFrame = document.createElement("div");
 	playlistControlFrame.id = "playlist-control";
 	
-		let whereButton = document.createElement("button");
-		whereButton.id = "where-button";
-		whereButton.innerHTML = "where";
-		whereButton.addEventListener("click", function() {
-			if (playingID < 0)
-				return;
-			playlist[playingID].obj.scrollIntoView({
-				behavior: "smooth",
-				block: "nearest"
+		let leftControlArea = document.createElement("div");
+		playlistControlFrame.appendChild(leftControlArea);
+		
+			let whereButton = document.createElement("button");
+			whereButton.className = "playlist-control-button";
+			whereButton.innerHTML = "where";
+			whereButton.addEventListener("click", function() {
+				if (playingID < 0)
+					return;
+				playlist[playingID].obj.scrollIntoView({
+					behavior: "smooth",
+					block: "nearest"
+				});
 			});
-		});
-		playlistControlFrame.appendChild(whereButton);
+			leftControlArea.appendChild(whereButton);
+		
+			let nextButton = document.createElement("button");
+			nextButton.className = "playlist-control-button";
+			nextButton.innerHTML = "next";
+			nextButton.addEventListener("click", function() {
+				if (playingID < 0)
+					return;
+				sendMsg({"type": "load", "id": playingID + 1});
+			});
+			leftControlArea.appendChild(nextButton);
+		
+			let clearButton = document.createElement("button");
+			clearButton.className = "playlist-control-button";
+			clearButton.innerHTML = "clear";
+			clearButton.addEventListener("click", function() {
+				sendMsg({"type": "clear"});
+			});
+			leftControlArea.appendChild(clearButton);
+		
+		let rightControlArea = document.createElement("div");
+		playlistControlFrame.appendChild(rightControlArea);
 	
-		let clearButton = document.createElement("button");
-		clearButton.id = "clear-button";
-		clearButton.innerHTML = "clear";
-		clearButton.addEventListener("click", function() {
-			sendMsg({"type": "clear"});
-		});
-		playlistControlFrame.appendChild(clearButton);
-	
-		var loopButton = document.createElement("button");
-		loopButton.className = "play-mode-toggle";
-		loopButton.innerHTML = "loop";
-		loopButton.addEventListener("click", function() {
-			if (serverPlayMode == PlayMode.LOOP)
-				sendMsg({"type": "playmode", "mode": PlayMode.DEFAULT});
-			else
-				sendMsg({"type": "playmode", "mode": PlayMode.LOOP});
-		});
-		playlistControlFrame.appendChild(loopButton);
-	
-		var randomButton = document.createElement("button");
-		randomButton.className = "play-mode-toggle";
-		randomButton.innerHTML = "random";
-		randomButton.addEventListener("click", function() {
-			if (serverPlayMode == PlayMode.RANDOM)
-				sendMsg({"type": "playmode", "mode": PlayMode.DEFAULT});
-			else
-				sendMsg({"type": "playmode", "mode": PlayMode.RANDOM});
-		});
-		playlistControlFrame.appendChild(randomButton);
+			var loopButton = document.createElement("button");
+			loopButton.className = "playlist-control-button";
+			loopButton.innerHTML = "loop";
+			loopButton.addEventListener("click", function() {
+				if (serverPlayMode == PlayMode.LOOP)
+					sendMsg({"type": "playmode", "mode": PlayMode.DEFAULT});
+				else
+					sendMsg({"type": "playmode", "mode": PlayMode.LOOP});
+			});
+			rightControlArea.appendChild(loopButton);
+		
+			var randomButton = document.createElement("button");
+			randomButton.className = "playlist-control-button";
+			randomButton.innerHTML = "random";
+			randomButton.addEventListener("click", function() {
+				if (serverPlayMode == PlayMode.RANDOM)
+					sendMsg({"type": "playmode", "mode": PlayMode.DEFAULT});
+				else
+					sendMsg({"type": "playmode", "mode": PlayMode.RANDOM});
+			});
+			rightControlArea.appendChild(randomButton);
 	
 	var $playlistContainer = document.createElement("div");
 	$playlistContainer.id = "playlist";
@@ -713,8 +734,10 @@ if (watchTogetherIP != null) {
 		ws.onmessage = onReceive;
 	}
 	window.onbeforeunload = function() {
-		if (ws !== undefined)
+		if (ws !== undefined) {
+			selfClosing = true;
 			ws.close();
+		}
 	}
 	
 	initCheck = setInterval(() => {
