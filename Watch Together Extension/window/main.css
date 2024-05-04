@@ -4,6 +4,9 @@
 body.inheritCursors * {
   cursor: inherit !important;
 }
+.bold {
+  font-weight: bold;
+}
 
 #connecting-ip {
   margin: 10px 10px 0 10px;
@@ -120,24 +123,56 @@ body.inheritCursors * {
 }
 
 #search-result {
-  margin-top: 10px;
+  margin-top: 20px;
+  width: 100%;
+  height: 400px;
   visibility: hidden;
+  display: flex;
+  justify-content: space-between;
 }
-#search-result-img {
-  margin: 0;
-  width: 99%;
-  height: 99%;
+#search-result-basic {
+  width: 28%;
+  height: 100%;
+}
+.search-result-img {
+  aspect-ratio: 16 / 9;
+  width: 100%;
   object-fit: contain;
   display: block;
 }
-#add-video-button {
-  width: 480px;
-  height: 270px;
+.search-result-text {
+  margin-top: 10px;
+  overflow: hidden;
+  text-align: left;
+  text-wrap: nowrap;
+  text-overflow: ellipsis;
+  font-size: 15px;
+}
+.search-operation-button {
+  margin-top: 10px;
+  margin-right: 100%;
+  width: 150px;
+  height: 30px;
+  font-size: 15px;
+  font-weight: bold;
+}
+
+#playlist-preview {
+  width: 70%;
+  height: 385px;
+  padding: 5px;
+  border: 1px solid;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.playlist-preview-item {
   cursor: pointer;
-  padding: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  margin: 0.5%;
+  aspect-ratio: 16 / 9;
+  width: 18%;
+}
+.playlist-preview-item.active {
+  border: 3px solid yellow;
 }
 
 

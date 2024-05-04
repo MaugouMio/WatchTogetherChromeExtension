@@ -23,9 +23,8 @@ var ytPlayerReady = false;
 var isFirstLoad = false;
 var bufferStartTime = 0;
 
-var searchResultType = -1;  // 0 = video, 1 = playlist
-var searchResultVideoID = undefined;
-var searchResultPlaylistID = undefined;
+var searchResultPlaylist = [];
+var playlistPreviewItems = [];
 
 var ws = undefined;
 var playlist = [];
@@ -314,18 +313,13 @@ function onReceive(e) {
 			break;
 			
 		case "search":
-			if (msg.id == "") {
+			searchResultPlaylist = msg.list;
+			if (searchResultPlaylist.length == 0) {
 				alert("Invalid playlist url!");
 				break;
 			}
 			
-			$searchResultImg.src = msg.icon;
-			$searchResultTitle.innerHTML = msg.title;
-			$searchResultAuthor.innerHTML = msg.len + " clip(s)";
-			searchResultPlaylistID = msg.id;
-			searchResultType = 1;
-			
-			showSearchResult();
+			showSearchResult(msg.icon, msg.title, searchResultPlaylist.length + " clip(s)");
 			break;
 			
 		case "playmode":
@@ -466,9 +460,49 @@ function onVideoError(e) {
 
 
 
-function showSearchResult() {
+function showSearchResult(imageUrl, title, author) {
+	$searchResultImg.src = imageUrl;
+	$searchResultTitle.innerHTML = title;
+	$searchResultAuthor.innerHTML = author;
+	$searchResultPreview.innerHTML = "";
+	playlistPreviewItems = [];
+	
+	for (let i = 0; i < searchResultPlaylist.length; i++) {
+		const videoID = searchResultPlaylist[i];
+		let previewObj = document.createElement("button");
+		previewObj.className = "playlist-preview-item active";
+		previewObj.addEventListener("click", function() {
+			if (playlistPreviewItems[i].classList.contains("active"))
+				playlistPreviewItems[i].classList.remove("active");
+			else
+				playlistPreviewItems[i].classList.add("active");
+		});
+		// write video title
+		let cacheData = cacheVideoInfo[videoID];
+		if (cacheData === undefined) {
+			fetch(`https://noembed.com/embed?dataType=json&url=https://www.youtube.com/watch?v=${videoID}`)
+				.then(res => res.json())
+				.then(data => {
+					previewObj.title = data.title;
+					// cache data for less html request
+					cacheVideoInfo[videoID] = { title: data.title, author: data.author_name };
+				});
+		}
+		else
+			previewObj.title = cacheData.title;
+		
+		$searchResultPreview.appendChild(previewObj);
+			
+			let img = document.createElement("img");
+			img.src = `https://i.ytimg.com/vi/${videoID}/default.jpg`;
+			img.className = "search-result-img";
+			previewObj.appendChild(img);
+		
+		playlistPreviewItems.push(previewObj);
+	}
+	
 	$searchResultFrame.style.visibility = "visible";
-	$searchResultAuthor.scrollIntoView({
+	$searchResultFrame.scrollIntoView({
 		behavior: "smooth",
 		block: "end"
 	});
@@ -635,25 +669,16 @@ if (watchTogetherIP != null) {
 				fetch(`https://noembed.com/embed?dataType=json&url=${$urlInput.value}`)
 					.then(res => res.json())
 					.then(data => {
-						$searchResultImg.src = imageUrl;
-						$searchResultTitle.innerHTML = data.title;
-						$searchResultAuthor.innerHTML = data.author_name;
-						searchResultType = 0;
-						searchResultVideoID = vID;
 						// cache data for less html request
 						cacheVideoInfo[vID] = { title: data.title, author: data.author_name };
 						
-						showSearchResult();
+						searchResultPlaylist = [vID];
+						showSearchResult(imageUrl, data.title, data.author_name);
 					});
 			}
 			else {
-				$searchResultImg.src = imageUrl;
-				$searchResultTitle.innerHTML = cacheData.title;
-				$searchResultAuthor.innerHTML = cacheData.author;
-				searchResultType = 0;
-				searchResultVideoID = vID;
-				
-				showSearchResult();
+				searchResultPlaylist = [vID];
+				showSearchResult(imageUrl, cacheData.title, cacheData.author);
 			}
 			$urlInput.value = "";
 		});
@@ -672,29 +697,56 @@ if (watchTogetherIP != null) {
 	var $searchResultFrame = document.createElement("div");
 	$searchResultFrame.id = "search-result";
 	
-		var $addVideoButton = document.createElement("button");
-		$addVideoButton.id = "add-video-button";
-		$addVideoButton.title = "Click to add to playlist";
-		$addVideoButton.addEventListener("click", function() {
-			if (searchResultType == 0)
-				sendMsg({"type": "add", "vid": searchResultVideoID});
-			else if (searchResultType == 1) {
-				sendMsg({"type": "add_list", "lid": searchResultPlaylistID});
-			}
-		});
-		$searchResultFrame.appendChild($addVideoButton);
-		
-			var $searchResultImg = document.createElement("img");
-			$searchResultImg.id = "search-result-img";
-			$addVideoButton.appendChild($searchResultImg);
+		var $searchResultBasic = document.createElement("div");
+		$searchResultBasic.id = "search-result-basic";
+		$searchResultFrame.appendChild($searchResultBasic);
 			
-		var $searchResultTitle = document.createElement("h1");
-		$searchResultTitle.id = "search-result-title";
-		$searchResultFrame.appendChild($searchResultTitle);
+			var $searchResultImg = document.createElement("img");
+			$searchResultImg.className = "search-result-img";
+			$searchResultBasic.appendChild($searchResultImg);
+			
+			var $searchResultTitle = document.createElement("p");
+			$searchResultTitle.className = "search-result-text bold";
+			$searchResultBasic.appendChild($searchResultTitle);
+			
+			var $searchResultAuthor = document.createElement("p");
+			$searchResultAuthor.className = "search-result-text";
+			$searchResultBasic.appendChild($searchResultAuthor);
 		
-		var $searchResultAuthor = document.createElement("h2");
-		$searchResultAuthor.id = "search-result-author";
-		$searchResultFrame.appendChild($searchResultAuthor);
+			let addVideoButton = document.createElement("button");
+			addVideoButton.className = "search-operation-button";
+			addVideoButton.innerHTML = "Add Video(s)";
+			addVideoButton.addEventListener("click", function() {
+				let tempList = [];
+				for (let i = 0; i < playlistPreviewItems.length; i++) {
+					if (playlistPreviewItems[i].classList.contains("active"))
+						tempList.push(searchResultPlaylist[i]);
+				}
+				sendMsg({"type": "add", "vid": tempList});
+			});
+			$searchResultBasic.appendChild(addVideoButton);
+		
+			let selectAllButton = document.createElement("button");
+			selectAllButton.className = "search-operation-button";
+			selectAllButton.innerHTML = "Select All";
+			selectAllButton.addEventListener("click", function() {
+				for (let i = 0; i < playlistPreviewItems.length; i++)
+					playlistPreviewItems[i].classList.add("active");
+			});
+			$searchResultBasic.appendChild(selectAllButton);
+		
+			let deselectAllButton = document.createElement("button");
+			deselectAllButton.className = "search-operation-button";
+			deselectAllButton.innerHTML = "Deselect All";
+			deselectAllButton.addEventListener("click", function() {
+				for (let i = 0; i < playlistPreviewItems.length; i++)
+					playlistPreviewItems[i].classList.remove("active");
+			});
+			$searchResultBasic.appendChild(deselectAllButton);
+		
+		var $searchResultPreview = document.createElement("div");
+		$searchResultPreview.id = "playlist-preview";
+		$searchResultFrame.appendChild($searchResultPreview);
 		
 	var copyURLButton = document.createElement("button");
 	copyURLButton.innerHTML = "Copy URL";

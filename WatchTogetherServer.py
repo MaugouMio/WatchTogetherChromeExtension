@@ -69,14 +69,13 @@ def GetPlayPacket(play_id, now, rate, paused):
 # playlist data request by user
 def GetPlaylistPacket(playlist_data):
 	if playlist_data == None:
-		return json.dumps({ "type": "search", "id": "" })
+		return json.dumps({ "type": "search", "list": [] })
 	else:
 		return json.dumps({
 			"type": "search",
-			"id": playlist_data["id"],
 			"title": playlist_data["title"],
 			"icon": playlist_data["icon"],
-			"len": len(playlist_data["list"]),
+			"list": playlist_data["list"],
 		})
 # playmode request by user
 def GetPlayModePacket(mode, loop):
@@ -204,7 +203,9 @@ async def process(websocket, path):
 					
 		elif protocol == "add":
 			wasPlaylistEmpty = len(playlist) == 0
-			playlist.append({"vid": data["vid"], "user": USERS[websocket]["name"], "invalid": ""})
+			user_name = USERS[websocket]["name"]
+			for vid in data["vid"]:
+				playlist.append({"vid": vid, "user": user_name, "invalid": ""})
 			# broadcast new playlist
 			if wasPlaylistEmpty:
 				current_id = 0
@@ -213,21 +214,6 @@ async def process(websocket, path):
 			else:
 				packet = GetListPacket(current_id, playlist)
 				await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
-		elif protocol == "add_list":
-			list_id = data["lid"]
-			if list_id in playlist_info_cache:
-				wasPlaylistEmpty = len(playlist) == 0
-				user_name = USERS[websocket]["name"]
-				for vid in playlist_info_cache[list_id]["list"]:
-					playlist.append({"vid": vid, "user": user_name, "invalid": ""})
-				# broadcast new playlist
-				if wasPlaylistEmpty:
-					current_id = 0
-					packet = GetListPacket(current_id, playlist, False)
-					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
-				else:
-					packet = GetListPacket(current_id, playlist)
-					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 		elif protocol == "remove":
 			target_id = data["id"]
 			if target_id >= 0 and target_id < len(playlist):
@@ -298,7 +284,7 @@ async def process(websocket, path):
 					else:  # use first video thumbnail
 						icon_url = f"https://i.ytimg.com/vi/{video_id_list[0]}/mqdefault.jpg"
 						
-					playlist_info_cache[playlist_id] = { "id": playlist_id, "title": playlist_title, "icon": icon_url, "list": video_id_list }
+					playlist_info_cache[playlist_id] = { "title": playlist_title, "icon": icon_url, "list": video_id_list }
 				
 				await websocket.send(GetPlaylistPacket(playlist_info_cache[playlist_id]))
 			except:
