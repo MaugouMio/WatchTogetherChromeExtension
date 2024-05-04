@@ -39,7 +39,7 @@ var cacheVideoInfo = {};
 
 var userList;
 var selfUserID;
-var userListFolded = true;
+var userListFolded = false;
 
 var draggingIdx = -1;
 var draggingObj = null;
@@ -546,14 +546,14 @@ if (watchTogetherIP != null) {
 	
 	var foldUserListButton = document.createElement("button");
 	foldUserListButton.id = "fold-user-button";
-	foldUserListButton.innerHTML = "︿";
+	foldUserListButton.innerHTML = "﹀";
+	foldUserListButton.style.bottom = "200px";
 	foldUserListButton.addEventListener("click", function() {
 		if (userListFolded) {
 			foldUserListButton.innerHTML = "﹀";
-			let frameHeight = "200px";
 			userListFrame.style.visibility = "visible";
 			renameFrame.style.visibility = "visible";
-			foldUserListButton.style.bottom = frameHeight;
+			foldUserListButton.style.bottom = "200px";
 			userListFolded = false;
 		}
 		else {
