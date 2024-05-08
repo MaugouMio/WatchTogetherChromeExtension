@@ -246,7 +246,7 @@ async def process(websocket, path):
 							
 						if current_id == from_id:
 							current_id = to_id
-						elif current_id <= to_id:
+						elif current_id <= to_id and current_id > from_id:
 							current_id -= 1
 					else:
 						for i in range(from_id, to_id, -1):
@@ -254,7 +254,7 @@ async def process(websocket, path):
 							
 						if current_id == from_id:
 							current_id = to_id
-						elif current_id >= to_id:
+						elif current_id >= to_id and current_id < from_id:
 							current_id += 1
 							
 					playlist[to_id] = targetVideo
