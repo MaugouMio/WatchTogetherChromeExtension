@@ -118,12 +118,10 @@ async def process(websocket, path):
 	global playmode
 	global user_idx
 	
-	USERS[websocket] = {"name": "Anonymous", "id": user_idx}
-	user_idx += 1
+	USERS[websocket] = {"name": "Anonymous", "id": -1}
 	
 	await websocket.send(GetListPacket(current_id, playlist, False))
 	await websocket.send(GetPlayModePacket(playmode, self_loop))
-	await websocket.send(GetUserIDPacket(USERS[websocket]["id"]))
 	async for message in websocket:
 		data = json.loads(message)
 		print("[{0}] {1}".format(USERS[websocket]["id"], data))
@@ -319,6 +317,14 @@ async def process(websocket, path):
 				await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 				
 		elif protocol == "name":
+			if USERS[websocket]["id"] < 0:
+				USERS[websocket]["id"] = user_idx
+				user_idx += 1
+				if user_idx > 999:
+					user_idx = 0
+					
+				await websocket.send(GetUserIDPacket(USERS[websocket]["id"]))
+					
 			USERS[websocket]["name"] = data["name"]
 			# broadcast to all users
 			packet = GetUserListPacket(list(USERS.values()))
