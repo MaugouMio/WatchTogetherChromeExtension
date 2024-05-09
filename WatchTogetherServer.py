@@ -43,12 +43,14 @@ playlist = [
 playlist_info_cache = {}
 playmode = PLAYMODE["DEFAULT"]
 user_idx = 0
+has_pin = False
 # playlist data
-def GetListPacket(play_id, current_list, update_only = True):
+def GetListPacket(play_id, current_list, pin, update_only = True):
 	return json.dumps({
 		"type": "list",
 		"id": play_id,
 		"playlist": current_list,
+		"pin": pin,
 		"update_only": update_only
 	})
 # load video but not play yet
@@ -117,11 +119,36 @@ async def process(websocket, path):
 	global playlist_info_cache
 	global playmode
 	global user_idx
+	global has_pin
+	
+	def MovePlaylist(from_id, to_id):
+		global current_id
+		
+		targetVideo = playlist[from_id]
+		if from_id < to_id:
+			for i in range(from_id, to_id):
+				playlist[i] = playlist[i + 1]
+				
+			if current_id == from_id:
+				current_id = to_id
+			elif current_id <= to_id and current_id > from_id:
+				current_id -= 1
+		else:
+			for i in range(from_id, to_id, -1):
+				playlist[i] = playlist[i - 1]
+				
+			if current_id == from_id:
+				current_id = to_id
+			elif current_id >= to_id and current_id < from_id:
+				current_id += 1
+		playlist[to_id] = targetVideo
+	
+	
 	
 	try:
 		USERS[websocket] = {"name": "Anonymous", "id": -1}
 		
-		await websocket.send(GetListPacket(current_id, playlist, False))
+		await websocket.send(GetListPacket(current_id, playlist, has_pin, False))
 		await websocket.send(GetPlayModePacket(playmode, self_loop))
 		async for message in websocket:
 			data = json.loads(message)
@@ -203,19 +230,28 @@ async def process(websocket, path):
 			elif protocol == "add":
 				wasPlaylistEmpty = len(playlist) == 0
 				user_name = USERS[websocket]["name"]
+				if has_pin:
+					pinnedVideo = playlist[-1]
+					del playlist[-1]
 				for vid in data["vid"]:
 					playlist.append({"vid": vid, "user": user_name, "invalid": ""})
+				if has_pin:
+					playlist.append(pinnedVideo)
+					
 				# broadcast new playlist
 				if wasPlaylistEmpty:
 					current_id = 0
-					packet = GetListPacket(current_id, playlist, False)
+					packet = GetListPacket(current_id, playlist, has_pin, False)
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 				else:
-					packet = GetListPacket(current_id, playlist)
+					packet = GetListPacket(current_id, playlist, has_pin)
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "remove":
 				target_id = data["id"]
 				if target_id >= 0 and target_id < len(playlist):
+					if target_id == len(playlist) - 1:
+						has_pin = False
+						
 					del playlist[target_id]
 					if target_id == current_id:
 						# load next video
@@ -224,50 +260,47 @@ async def process(websocket, path):
 						if current_id >= len(playlist):
 							current_id = -1
 						# broadcast new playlist and force load new video
-						packet = GetListPacket(current_id, playlist, False)
+						packet = GetListPacket(current_id, playlist, has_pin, False)
 						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 					else:
 						if target_id < current_id:
 							current_id -= 1
 						# broadcast new playlist
-						packet = GetListPacket(current_id, playlist)
+						packet = GetListPacket(current_id, playlist, has_pin)
 						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "move":
 				from_id = data["from"]
 				to_id = data["to"]
-				if from_id >= 0 and from_id < len(playlist) and to_id >= 0 and to_id < len(playlist):
-					if from_id != to_id:
-						targetVideo = playlist[from_id]
-						
-						if from_id < to_id:
-							for i in range(from_id, to_id):
-								playlist[i] = playlist[i + 1]
-								
-							if current_id == from_id:
-								current_id = to_id
-							elif current_id <= to_id and current_id > from_id:
-								current_id -= 1
-						else:
-							for i in range(from_id, to_id, -1):
-								playlist[i] = playlist[i - 1]
-								
-							if current_id == from_id:
-								current_id = to_id
-							elif current_id >= to_id and current_id < from_id:
-								current_id += 1
-								
-						playlist[to_id] = targetVideo
-						# broadcast new playlist
-						packet = GetListPacket(current_id, playlist)
-						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
+				if not has_pin or (from_id < len(playlist) - 1 and to_id < len(playlist) - 1):
+					if from_id >= 0 and from_id < len(playlist) and to_id >= 0 and to_id < len(playlist):
+						if from_id != to_id:
+							MovePlaylist(from_id, to_id)
+							# broadcast new playlist
+							packet = GetListPacket(current_id, playlist, has_pin)
+							await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "clear":
 				playlist.clear()
 				start_time = 0
 				pause_time = 0
 				current_id = -1
+				has_pin = False
 				# broadcast new playlist and force load new video
-				packet = GetListPacket(current_id, playlist, False)
+				packet = GetListPacket(current_id, playlist, has_pin, False)
 				await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
+			elif protocol == "pin":
+				pin_id = data["id"]
+				if pin_id >= 0:
+					if not has_pin or pin_id != len(playlist) - 1:
+						has_pin = True
+						MovePlaylist(pin_id, len(playlist) - 1)
+						# broadcast new playlist
+						packet = GetListPacket(current_id, playlist, has_pin)
+						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
+				elif has_pin:
+					has_pin = False
+					# broadcast new playlist
+					packet = GetListPacket(current_id, playlist, has_pin)
+					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			
 			elif protocol == "search":
 				try:

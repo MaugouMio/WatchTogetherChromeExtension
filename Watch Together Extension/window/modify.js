@@ -35,11 +35,14 @@ var serverPaused = false;
 var serverPlayMode = PlayMode.DEFAULT;
 var serverPlaybackRate = 1;
 var serverSelfLoop = false;
+var serverHasPin = false;
 var cacheVideoInfo = {};
 
 var userList;
 var selfUserID;
 var userListFolded = false;
+
+var rightClickVideoIdx = -1;
 
 var draggingIdx = -1;
 var draggingObj = null;
@@ -99,7 +102,7 @@ function videoDragLeave(e) {
 }
 
 function onClickOutside(e) {
-	copyURLButton.style.visibility = "hidden";
+	rightClickMenu.style.visibility = "hidden";
 	document.removeEventListener("click", onClickOutside);
 }
 
@@ -109,11 +112,16 @@ function videoRightClick(e) {
 	document.addEventListener("click", onClickOutside);
 	
 	const rect = e.target.getBoundingClientRect();
-	copyURLButton.style.visibility = "visible";
-	copyURLButton.style.top = `${rect.top + e.offsetY + 3}px`;
-	copyURLButton.style.left  = `${rect.left + e.offsetX + 3}px`;
+	rightClickMenu.style.visibility = "visible";
+	rightClickMenu.style.top = `${rect.top + e.offsetY + 3}px`;
+	rightClickMenu.style.left  = `${rect.left + e.offsetX + 3}px`;
 	
-	rightClickVideoID = playlist[parseInt(e.currentTarget.getAttribute("video-idx"))].vID;
+	rightClickVideoIdx = parseInt(e.currentTarget.getAttribute("video-idx"));
+	
+	if (serverHasPin && rightClickVideoIdx == playlist.length - 1)
+		pinBottomButton.innerHTML = "Remove Pin";
+	else
+		pinBottomButton.innerHTML = "Pin to Bottom";
 }
 
 // ============= WebSocket server protocol ============= //
@@ -168,6 +176,7 @@ function onReceive(e) {
 			$playlistContainer.innerHTML = "";
 			draggingIdx = -1;  // reset drag event
 			playingID = msg.id;
+			serverHasPin = msg.pin;
 			playlist = [];
 			for (let i = 0; i < msg.playlist.length; i++) {
 				const videoID = msg.playlist[i].vid;
@@ -177,14 +186,22 @@ function onReceive(e) {
 				var btnFrame = document.createElement("div");
 				btnFrame.className = "playlist-item";
 				btnFrame.setAttribute("video-idx", i);
-				btnFrame.addEventListener("mouseover", videoDragEnter);
-				btnFrame.addEventListener("mouseout", videoDragLeave);
 				btnFrame.addEventListener("contextmenu", videoRightClick);
+				
+				let btnDrag = document.createElement("button");
+				btnDrag.className = "playlist-drag";
+				btnDrag.innerHTML = "⠿";
+				if (!serverHasPin || i < msg.playlist.length - 1) {
+					btnFrame.addEventListener("mouseover", videoDragEnter);
+					btnFrame.addEventListener("mouseout", videoDragLeave);
 					
-					let btnDrag = document.createElement("button");
-					btnDrag.className = "playlist-drag";
-					btnDrag.innerHTML = "⠿";
 					btnDrag.addEventListener("mousedown", videoDragMouseDown);
+				}
+				else {
+					btnDrag.style.color = "red";
+					btnDrag.style.cursor = "not-allowed";
+					btnFrame.style["border-top"] = "4px solid yellow";
+				}
 					btnFrame.appendChild(btnDrag);
 				
 					let btn = document.createElement("button");
@@ -751,22 +768,40 @@ if (watchTogetherIP != null) {
 		$searchResultPreview.id = "playlist-preview";
 		$searchResultFrame.appendChild($searchResultPreview);
 		
-	var copyURLButton = document.createElement("button");
-	copyURLButton.innerHTML = "Copy URL";
-	copyURLButton.id = "copy-url-button";
-	copyURLButton.addEventListener("click", function(e) {
-		e.stopPropagation();
-		onClickOutside(e);
-		
-		const el = document.createElement("textarea");
-		el.value = `https://www.youtube.com/watch?v=${rightClickVideoID}`;
-		document.body.appendChild(el);
-		el.select();
-		document.execCommand("copy");
-		document.body.removeChild(el);
-		
-		setTimeout(() => {alert("Video URL Copied!");}, 10);
-	});
+	
+	var rightClickMenu = document.createElement("div");
+	rightClickMenu.id = "right-click-menu";
+	
+		let copyURLButton = document.createElement("button");
+		copyURLButton.innerHTML = "Copy URL";
+		copyURLButton.className = "right-click-menu-item";
+		copyURLButton.addEventListener("click", function(e) {
+			e.stopPropagation();
+			onClickOutside(e);
+			
+			const el = document.createElement("textarea");
+			el.value = `https://www.youtube.com/watch?v=${playlist[rightClickVideoIdx].vID}`;
+			document.body.appendChild(el);
+			el.select();
+			document.execCommand("copy");
+			document.body.removeChild(el);
+			
+			setTimeout(() => {alert("Video URL Copied!");}, 10);
+		});
+		rightClickMenu.appendChild(copyURLButton);
+	
+		var pinBottomButton = document.createElement("button");
+		pinBottomButton.className = "right-click-menu-item";
+		pinBottomButton.addEventListener("click", function(e) {
+			e.stopPropagation();
+			onClickOutside(e);
+			
+			if (serverHasPin && rightClickVideoIdx == playlist.length - 1)
+				sendMsg({"type": "pin", "id": -1});
+			else
+				sendMsg({"type": "pin", "id": rightClickVideoIdx});
+		});
+		rightClickMenu.appendChild(pinBottomButton);
 		
 	// =================================================================================
 	
@@ -823,7 +858,7 @@ if (watchTogetherIP != null) {
 		
 		topBar.innerHTML = "";
 		topBar.appendChild($ipInfo);
-		topBar.appendChild(copyURLButton);
+		topBar.appendChild(rightClickMenu);
 		
 		let tmpElement = rightFrame;
 		rightFrame = rightFrame.parentElement;

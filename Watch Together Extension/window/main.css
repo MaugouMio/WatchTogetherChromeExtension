@@ -74,16 +74,25 @@ body.inheritCursors * {
   padding: 0;
 }
 
-#copy-url-button {
+#right-click-menu {
   width: 100px;
-  height: 25px;
-  border: none;
   position: absolute;
   visibility: hidden;
+  display: flex;
+  flex-direction: column;
   background: #111;
   color: #fff;
 }
-#copy-url-button:hover {
+.right-click-menu-item {
+  padding-left: 5px;
+  width: 100px;
+  height: 25px;
+  border: none;
+  background: #111;
+  color: #fff;
+  text-align: left;
+}
+.right-click-menu-item:hover {
   background: #999
 }
 
