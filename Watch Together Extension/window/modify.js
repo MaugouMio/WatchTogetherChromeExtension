@@ -293,16 +293,19 @@ function onReceive(e) {
 			if (msg.id != playingID)
 				break;
 			
+			serverPaused = msg.paused;
 			serverCallPlayTime = Date.now();
 			serverPlayTime = msg.time;
-			if (Math.abs(ytPlayer.getCurrentTime() - serverPlayTime) > 0.5)
-				ytPlayer.seekTo(Math.min(serverPlayTime, ytPlayer.getDuration() - 1), true);
+			if (Math.abs(ytPlayer.getCurrentTime() - serverPlayTime) > 0.5) {
+				// do not seekTo when already paused
+				if (!(serverPaused && ytPlayer.getPlayerState() == YTPlayerState.PAUSED))
+					ytPlayer.seekTo(Math.min(serverPlayTime, ytPlayer.getDuration() - 1), true);
+			}
 			
 			serverPlaybackRate = msg.rate;
 			if (Math.abs(ytPlayer.getPlaybackRate() - serverPlaybackRate) > 0.01)
 				ytPlayer.setPlaybackRate(serverPlaybackRate);
 			
-			serverPaused = msg.paused;
 			if (serverPaused) {
 				if (!isFirstLoad)  // directly pause the video will cause the play event never fires (which means you don't know when to fix the timeline) when there is no ads
 					ytPlayer.pauseVideo();
