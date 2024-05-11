@@ -53,6 +53,39 @@ def GetListPacket(play_id, current_list, pin, update_only = True):
 		"pin": pin,
 		"update_only": update_only
 	})
+# add videos to playlist at specific pos
+def GetAddPacket(play_id, pos, add_list, update_only = True):
+	return json.dumps({
+		"type": "add",
+		"id": play_id,
+		"at": pos,
+		"list": add_list,
+		"update_only": update_only
+	})
+# remove video at specific pos in playlist
+def GetRemovePacket(play_id, pos, update_only = True):
+	return json.dumps({
+		"type": "remove",
+		"id": play_id,
+		"at": pos,
+		"update_only": update_only
+	})
+# move a video from `from_id` to `to_id` in playlist
+def GetMovePacket(play_id, from_id, to_id, update_only):
+	return json.dumps({
+		"type": "move",
+		"id": play_id,
+		"from": from_id,
+		"to": to_id,
+		"update_only": update_only
+	})
+# pin the video at `pin_id` to bottom, `pin_id < 0` means removing the pin
+def GetPinPacket(play_id, pin_id):
+	return json.dumps({
+		"type": "pin",
+		"id": play_id,
+		"pin": pin_id
+	})
 # load video but not play yet
 def GetLoadPacket(play_id):
 	return json.dumps({
@@ -235,19 +268,22 @@ async def process(websocket, path):
 					start_time = 0
 					pause_time = 0
 				elif has_pin:
-					insert_pos = -1
+					if current_id == len(playlist) - 1:
+						current_id += len(data["vid"])
+					insert_pos = len(playlist) - 1
 				else:
 					insert_pos = len(playlist)
 					
-				playlist[insert_pos:insert_pos] = [{"vid": vid, "user": user_name, "invalid": ""} for vid in data["vid"]]
+				insert_list = [{"vid": vid, "user": user_name, "invalid": ""} for vid in data["vid"]]
+				playlist[insert_pos:insert_pos] = insert_list
 					
-				# broadcast new playlist
+				# broadcast added videos
 				if wasPlaylistEmpty or "interrupt" in data:
 					current_id = max(current_id, 0)
-					packet = GetListPacket(current_id, playlist, has_pin, False)
+					packet = GetAddPacket(current_id, insert_pos, insert_list, False)
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 				else:
-					packet = GetListPacket(current_id, playlist, has_pin)
+					packet = GetAddPacket(current_id, insert_pos, insert_list)
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "remove":
 				target_id = data["id"]
@@ -263,13 +299,13 @@ async def process(websocket, path):
 						if current_id >= len(playlist):
 							current_id = -1
 						# broadcast new playlist and force load new video
-						packet = GetListPacket(current_id, playlist, has_pin, False)
+						packet = GetRemovePacket(current_id, target_id, False)
 						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 					else:
 						if target_id < current_id:
 							current_id -= 1
 						# broadcast new playlist
-						packet = GetListPacket(current_id, playlist, has_pin)
+						packet = GetRemovePacket(current_id, target_id)
 						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "move":
 				from_id = data["from"]
@@ -291,7 +327,7 @@ async def process(websocket, path):
 							
 						if need_update:
 							# broadcast new playlist
-							packet = GetListPacket(current_id, playlist, has_pin, no_reload)
+							packet = GetMovePacket(current_id, from_id, to_id, no_reload)
 							await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "clear":
 				playlist.clear()
@@ -308,14 +344,12 @@ async def process(websocket, path):
 					if not has_pin or pin_id != len(playlist) - 1:
 						has_pin = True
 						MovePlaylist(pin_id, len(playlist) - 1)
-						# broadcast new playlist
-						packet = GetListPacket(current_id, playlist, has_pin)
-						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 				elif has_pin:
 					has_pin = False
-					# broadcast new playlist
-					packet = GetListPacket(current_id, playlist, has_pin)
-					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
+					
+				# broadcast new playlist
+				packet = GetPinPacket(current_id, pin_id)
+				await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			
 			elif protocol == "search":
 				try:

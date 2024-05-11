@@ -27,7 +27,8 @@ var searchResultPlaylist = [];
 var playlistPreviewItems = [];
 
 var ws = undefined;
-var playlist = [];
+var serverPlaylist = [];  // playlist data from server
+var playlistObjs = [];  // client playlist objects
 var playingID = -1;
 var serverCallPlayTime = -1;
 var serverPlayTime = -1;
@@ -118,7 +119,7 @@ function videoRightClick(e) {
 	
 	rightClickVideoIdx = parseInt(e.currentTarget.getAttribute("video-idx"));
 	
-	let isPinnedVideo = serverHasPin && rightClickVideoIdx == playlist.length - 1;
+	let isPinnedVideo = serverHasPin && rightClickVideoIdx == playlistObjs.length - 1;
 	if (isPinnedVideo)
 		pinBottomButton.innerHTML = "Remove Pin";
 	else
@@ -160,127 +161,130 @@ function onServerClosed() {
 
 function updatePlaylistOverlay(idx) {
 	if (idx == playingID) {
-		playlist[idx].overlayObj.style.visibility = "visible";
-		playlist[idx].overlayObj.style["text-decoration"] = null;
-		playlist[idx].overlayObj.innerHTML = "playing";
+		playlistObjs[idx].overlayObj.style.visibility = "visible";
+		playlistObjs[idx].overlayObj.style["text-decoration"] = null;
+		playlistObjs[idx].overlayObj.innerHTML = "playing";
 	}
 	else {
-		if (playlist[idx].invalid == "")
-			playlist[idx].overlayObj.style.visibility = "hidden";
+		if (serverPlaylist[idx].invalid == "")
+			playlistObjs[idx].overlayObj.style.visibility = "hidden";
 		else {
-			playlist[idx].overlayObj.style.visibility = "visible";
-			playlist[idx].overlayObj.style["text-decoration"] = "line-through";
-			playlist[idx].overlayObj.innerHTML = playlist[idx].invalid;
+			playlistObjs[idx].overlayObj.style.visibility = "visible";
+			playlistObjs[idx].overlayObj.style["text-decoration"] = "line-through";
+			playlistObjs[idx].overlayObj.innerHTML = serverPlaylist[idx].invalid;
 		}
 	}
+}
+function rebuildPlaylist() {
+	$playlistContainer.innerHTML = "";
+	draggingIdx = -1;  // reset drag event
+	playlistObjs = [];
+	for (let i = 0; i < serverPlaylist.length; i++) {
+		const videoID = serverPlaylist[i].vid;
+		const userName = serverPlaylist[i].user;
+		
+		var btnFrame = document.createElement("div");
+		btnFrame.className = "playlist-item";
+		btnFrame.setAttribute("video-idx", i);
+		btnFrame.addEventListener("contextmenu", videoRightClick);
+		
+			let btnDrag = document.createElement("button");
+			btnDrag.className = "playlist-drag";
+			btnDrag.innerHTML = "⠿";
+			if (!serverHasPin || i < serverPlaylist.length - 1) {
+				btnFrame.addEventListener("mouseover", videoDragEnter);
+				btnFrame.addEventListener("mouseout", videoDragLeave);
+				
+				btnDrag.addEventListener("mousedown", videoDragMouseDown);
+			}
+			else {
+				btnDrag.style.color = "red";
+				btnDrag.style.cursor = "not-allowed";
+				btnFrame.style["border-top"] = "4px solid yellow";
+			}
+			btnFrame.appendChild(btnDrag);
+		
+			let btn = document.createElement("button");
+			btn.className = "playlist-item-button";
+			btn.addEventListener('click', function() {
+				if (i != playingID)
+					sendMsg({"type": "load", "id": i});
+			});
+			btnFrame.appendChild(btn);
+			
+				let img = document.createElement("img");
+				let imageUrl = "https://i.ytimg.com/vi/" + videoID + "/default.jpg";
+				img.src = imageUrl
+				btn.appendChild(img);
+				
+				let infoFrame = document.createElement("div");
+				infoFrame.className = "playlist-item-info";
+				btn.appendChild(infoFrame);
+				
+					let title = document.createElement("p");
+					title.className = "playlist-item-info-text";
+					title.style.height = "60%";
+					infoFrame.appendChild(title);
+					
+					let author = document.createElement("p");
+					author.className = "playlist-item-info-text";
+					author.style.height = "20%";
+					author.style["text-wrap"] = "nowrap";
+					infoFrame.appendChild(author);
+					
+					let fromUser = document.createElement("p");
+					fromUser.className = "playlist-item-info-text";
+					fromUser.style.height = "20%";
+					fromUser.style["text-wrap"] = "nowrap";
+					fromUser.innerHTML = userName;
+					infoFrame.appendChild(fromUser);
+			
+			let playingOverlay = document.createElement("div");
+			playingOverlay.className = "playing-overlay";
+			btnFrame.appendChild(playingOverlay);
+			
+			let btnRemove = document.createElement("button");
+			btnRemove.className = "playlist-remove";
+			btnRemove.innerHTML = "X";
+			btnRemove.addEventListener('click', function(event) {
+				sendMsg({"type": "remove", "id": i});
+			});
+			btnFrame.appendChild(btnRemove);
+		
+		$playlistContainer.appendChild(btnFrame);
+		playlistObjs.push({ obj: btnFrame, overlayObj: playingOverlay });
+		updatePlaylistOverlay(i);
+		
+		// write video title and author
+		let cacheData = cacheVideoInfo[videoID];
+		if (cacheData === undefined) {
+			fetch(`https://noembed.com/embed?dataType=json&url=https://www.youtube.com/watch?v=${videoID}`)
+				.then(res => res.json())
+				.then(data => {
+					title.innerHTML = data.title;
+					author.innerHTML = data.author_name;
+					// cache data for less html request
+					cacheVideoInfo[videoID] = { title: data.title, author: data.author_name };
+				});
+		}
+		else {
+			title.innerHTML = cacheData.title;
+			author.innerHTML = cacheData.author;
+		}
+	}
+	
+	if (playlistObjs.length == 0)
+		$playlistContainer.innerHTML = "Search and add videos to playlist";
 }
 // on receive WebSocket server msg
 function onReceive(e) {
 	var msg = JSON.parse(e.data);
 	switch (msg.type) {
 		case "list":
-			$playlistContainer.innerHTML = "";
-			draggingIdx = -1;  // reset drag event
 			playingID = msg.id;
 			serverHasPin = msg.pin;
-			playlist = [];
-			for (let i = 0; i < msg.playlist.length; i++) {
-				const videoID = msg.playlist[i].vid;
-				const userName = msg.playlist[i].user;
-				const invalidUser = msg.playlist[i].invalid;
-				
-				var btnFrame = document.createElement("div");
-				btnFrame.className = "playlist-item";
-				btnFrame.setAttribute("video-idx", i);
-				btnFrame.addEventListener("contextmenu", videoRightClick);
-				
-				let btnDrag = document.createElement("button");
-				btnDrag.className = "playlist-drag";
-				btnDrag.innerHTML = "⠿";
-				if (!serverHasPin || i < msg.playlist.length - 1) {
-					btnFrame.addEventListener("mouseover", videoDragEnter);
-					btnFrame.addEventListener("mouseout", videoDragLeave);
-					
-					btnDrag.addEventListener("mousedown", videoDragMouseDown);
-				}
-				else {
-					btnDrag.style.color = "red";
-					btnDrag.style.cursor = "not-allowed";
-					btnFrame.style["border-top"] = "4px solid yellow";
-				}
-					btnFrame.appendChild(btnDrag);
-				
-					let btn = document.createElement("button");
-					btn.className = "playlist-item-button";
-					btn.addEventListener('click', function() {
-						if (i != playingID)
-							sendMsg({"type": "load", "id": i});
-					});
-					btnFrame.appendChild(btn);
-					
-						let img = document.createElement("img");
-						let imageUrl = "https://i.ytimg.com/vi/" + videoID + "/default.jpg";
-						img.src = imageUrl
-						btn.appendChild(img);
-						
-						let infoFrame = document.createElement("div");
-						infoFrame.className = "playlist-item-info";
-						btn.appendChild(infoFrame);
-						
-							let title = document.createElement("p");
-							title.className = "playlist-item-info-text";
-							title.style.height = "60%";
-							infoFrame.appendChild(title);
-							
-							let author = document.createElement("p");
-							author.className = "playlist-item-info-text";
-							author.style.height = "20%";
-							author.style["text-wrap"] = "nowrap";
-							infoFrame.appendChild(author);
-							
-							let fromUser = document.createElement("p");
-							fromUser.className = "playlist-item-info-text";
-							fromUser.style.height = "20%";
-							fromUser.style["text-wrap"] = "nowrap";
-							fromUser.innerHTML = userName;
-							infoFrame.appendChild(fromUser);
-					
-					let playingOverlay = document.createElement("div");
-					playingOverlay.className = "playing-overlay";
-					btnFrame.appendChild(playingOverlay);
-					
-					let btnRemove = document.createElement("button");
-					btnRemove.className = "playlist-remove";
-					btnRemove.innerHTML = "X";
-					btnRemove.addEventListener('click', function(event) {
-						sendMsg({"type": "remove", "id": i});
-					});
-					btnFrame.appendChild(btnRemove);
-				
-				$playlistContainer.appendChild(btnFrame);
-				playlist.push({ vID: videoID, obj: btnFrame, overlayObj: playingOverlay, invalid: invalidUser });
-				updatePlaylistOverlay(i);
-				
-				// write video title and author
-				let cacheData = cacheVideoInfo[videoID];
-				if (cacheData === undefined) {
-					fetch(`https://noembed.com/embed?dataType=json&url=https://www.youtube.com/watch?v=${videoID}`)
-						.then(res => res.json())
-						.then(data => {
-							title.innerHTML = data.title;
-							author.innerHTML = data.author_name;
-							// cache data for less html request
-							cacheVideoInfo[videoID] = { title: data.title, author: data.author_name };
-						});
-				}
-				else {
-					title.innerHTML = cacheData.title;
-					author.innerHTML = cacheData.author;
-				}
-			}
-			if (playlist.length == 0)
-				$playlistContainer.innerHTML = "Search and add videos to playlist";
-				
+			serverPlaylist = msg.playlist;
+			rebuildPlaylist();
 			
 			if (ytPlayerReady) {
 				if (playingID < 0) {
@@ -291,8 +295,48 @@ function onReceive(e) {
 					}
 				}
 				else if (!msg.update_only)
-					ytPlayer.cueVideoById(playlist[playingID].vID);
+					ytPlayer.cueVideoById(serverPlaylist[playingID].vid);
 			}
+			break;
+			
+		case "add":
+			playingID = msg.id;
+			for (let i = 0; i < msg.list.length; i++)
+				serverPlaylist.splice(msg.at + i, 0, msg.list[i]);
+			rebuildPlaylist();
+			
+			if (ytPlayerReady && !msg.update_only)
+				ytPlayer.cueVideoById(serverPlaylist[playingID].vid);
+			break;
+			
+		case "remove":
+			playingID = msg.id;
+			serverPlaylist.splice(msg.at, 1);
+			rebuildPlaylist();
+			
+			if (ytPlayerReady && !msg.update_only)
+				ytPlayer.cueVideoById(serverPlaylist[playingID].vid);
+			break;
+			
+		case "move":
+			playingID = msg.id;
+			serverPlaylist.splice(msg.to, 0, serverPlaylist.splice(msg.from, 1)[0]);
+			rebuildPlaylist();
+			
+			if (ytPlayerReady && !msg.update_only)
+				ytPlayer.cueVideoById(serverPlaylist[playingID].vid);
+			break;
+			
+		case "pin":
+			playingID = msg.id;
+			if (msg.pin < 0) {
+				serverHasPin = false;
+			}
+			else {
+				serverHasPin = true;
+				serverPlaylist.splice(serverPlaylist.length - 1, 0, serverPlaylist.splice(msg.pin, 1)[0]);
+			}
+			rebuildPlaylist();
 			break;
 			
 		case "load":
@@ -301,11 +345,11 @@ function onReceive(e) {
 			
 			playingID = msg.id;
 			// update playing notation
-			for (let i = 0; i < playlist.length; i++)
+			for (let i = 0; i < playlistObjs.length; i++)
 				updatePlaylistOverlay(i);
 			
 			if (playingID >= 0)
-				ytPlayer.cueVideoById(playlist[playingID].vID);
+				ytPlayer.cueVideoById(serverPlaylist[playingID].vid);
 			else
 				ytPlayer.cueVideoById("0");
 			break;
@@ -393,7 +437,7 @@ function onReceive(e) {
 		case "invalid":
 		{
 			let updateID = msg.id;
-			playlist[updateID].invalid = msg.by;
+			serverPlaylist[updateID].invalid = msg.by;
 			// update overlay text
 			if (updateID != playingID)
 				updatePlaylistOverlay(updateID);
@@ -606,7 +650,7 @@ if (watchTogetherIP != null) {
 			whereButton.addEventListener("click", function() {
 				if (playingID < 0)
 					return;
-				playlist[playingID].obj.scrollIntoView({
+				playlistObjs[playingID].obj.scrollIntoView({
 					behavior: "smooth",
 					block: "nearest"
 				});
@@ -799,7 +843,7 @@ if (watchTogetherIP != null) {
 			onClickOutside(e);
 			
 			const el = document.createElement("textarea");
-			el.value = `https://www.youtube.com/watch?v=${playlist[rightClickVideoIdx].vID}`;
+			el.value = `https://www.youtube.com/watch?v=${serverPlaylist[rightClickVideoIdx].vid}`;
 			document.body.appendChild(el);
 			el.select();
 			document.execCommand("copy");
@@ -815,7 +859,7 @@ if (watchTogetherIP != null) {
 			e.stopPropagation();
 			onClickOutside(e);
 			
-			if (serverHasPin && rightClickVideoIdx == playlist.length - 1)
+			if (serverHasPin && rightClickVideoIdx == playlistObjs.length - 1)
 				sendMsg({"type": "pin", "id": -1});
 			else
 				sendMsg({"type": "pin", "id": rightClickVideoIdx});
