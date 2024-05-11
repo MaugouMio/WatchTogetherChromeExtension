@@ -118,10 +118,16 @@ function videoRightClick(e) {
 	
 	rightClickVideoIdx = parseInt(e.currentTarget.getAttribute("video-idx"));
 	
-	if (serverHasPin && rightClickVideoIdx == playlist.length - 1)
+	let isPinnedVideo = serverHasPin && rightClickVideoIdx == playlist.length - 1;
+	if (isPinnedVideo)
 		pinBottomButton.innerHTML = "Remove Pin";
 	else
 		pinBottomButton.innerHTML = "Pin to Bottom";
+	
+	if (isPinnedVideo || rightClickVideoIdx == playingID)
+		interruptButton.style.display = "None";
+	else
+		interruptButton.style.display = null;
 }
 
 // ============= WebSocket server protocol ============= //
@@ -746,6 +752,19 @@ if (watchTogetherIP != null) {
 			});
 			$searchResultBasic.appendChild(addVideoButton);
 		
+			let interruptVideoButton = document.createElement("button");
+			interruptVideoButton.className = "search-operation-button";
+			interruptVideoButton.innerHTML = "Interrupt Video(s)";
+			interruptVideoButton.addEventListener("click", function() {
+				let tempList = [];
+				for (let i = 0; i < playlistPreviewItems.length; i++) {
+					if (playlistPreviewItems[i].classList.contains("active"))
+						tempList.push(searchResultPlaylist[i]);
+				}
+				sendMsg({"type": "add", "vid": tempList, "interrupt": true});
+			});
+			$searchResultBasic.appendChild(interruptVideoButton);
+		
 			let selectAllButton = document.createElement("button");
 			selectAllButton.className = "search-operation-button";
 			selectAllButton.innerHTML = "Select All";
@@ -802,6 +821,17 @@ if (watchTogetherIP != null) {
 				sendMsg({"type": "pin", "id": rightClickVideoIdx});
 		});
 		rightClickMenu.appendChild(pinBottomButton);
+	
+		var interruptButton = document.createElement("button");
+		interruptButton.innerHTML = "Interrupt";
+		interruptButton.className = "right-click-menu-item";
+		interruptButton.addEventListener("click", function(e) {
+			let targetID = playingID < 0 ? rightClickVideoIdx : playingID;
+			if (targetID > rightClickVideoIdx)
+				targetID--;
+			sendMsg({"type": "move", "from": rightClickVideoIdx, "to": targetID, "interrupt": true});
+		});
+		rightClickMenu.appendChild(interruptButton);
 		
 	// =================================================================================
 	

@@ -157,7 +157,7 @@ body.inheritCursors * {
 }
 .search-operation-button {
   margin-top: 10px;
-  margin-right: 100%;
+  margin-right: 10px;
   width: 150px;
   height: 30px;
   font-size: 15px;

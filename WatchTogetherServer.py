@@ -230,17 +230,20 @@ async def process(websocket, path):
 			elif protocol == "add":
 				wasPlaylistEmpty = len(playlist) == 0
 				user_name = USERS[websocket]["name"]
-				if has_pin:
-					pinnedVideo = playlist[-1]
-					del playlist[-1]
-				for vid in data["vid"]:
-					playlist.append({"vid": vid, "user": user_name, "invalid": ""})
-				if has_pin:
-					playlist.append(pinnedVideo)
+				if "interrupt" in data:
+					insert_pos = max(current_id, 0)
+					start_time = 0
+					pause_time = 0
+				elif has_pin:
+					insert_pos = -1
+				else:
+					insert_pos = len(playlist)
+					
+				playlist[insert_pos:insert_pos] = [{"vid": vid, "user": user_name, "invalid": ""} for vid in data["vid"]]
 					
 				# broadcast new playlist
-				if wasPlaylistEmpty:
-					current_id = 0
+				if wasPlaylistEmpty or "interrupt" in data:
+					current_id = max(current_id, 0)
 					packet = GetListPacket(current_id, playlist, has_pin, False)
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 				else:
@@ -273,10 +276,22 @@ async def process(websocket, path):
 				to_id = data["to"]
 				if not has_pin or (from_id < len(playlist) - 1 and to_id < len(playlist) - 1):
 					if from_id >= 0 and from_id < len(playlist) and to_id >= 0 and to_id < len(playlist):
+						need_update = False
 						if from_id != to_id:
 							MovePlaylist(from_id, to_id)
+							need_update = True
+							
+						no_reload = True
+						if "interrupt" in data:
+							current_id = to_id
+							start_time = 0
+							pause_time = 0
+							no_reload = False
+							need_update = True
+							
+						if need_update:
 							# broadcast new playlist
-							packet = GetListPacket(current_id, playlist, has_pin)
+							packet = GetListPacket(current_id, playlist, has_pin, no_reload)
 							await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "clear":
 				playlist.clear()
