@@ -245,9 +245,13 @@ async def process(websocket, path):
 						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 					else:
 						if playmode == PLAYMODE["RANDOM"]:
-							temp_list = list(range(len(playlist)))
-							temp_list[current_id], temp_list[-1] = temp_list[-1], temp_list[current_id]
-							current_id = temp_list[random.randint(0, len(temp_list) - 2)]  # random except the last element (current_id)
+							rand_range = (len(playlist) - 1) if has_pin else len(playlist)
+							if rand_range <= 1:
+								current_id = -1  # no available random videos, stop playing
+							else:
+								temp_list = list(range(rand_range))
+								temp_list[current_id], temp_list[-1] = temp_list[-1], temp_list[current_id]
+								current_id = temp_list[random.randint(0, len(temp_list) - 2)]  # random except the last element (current_id)
 						else:
 							current_id += 1
 							if current_id >= len(playlist):
