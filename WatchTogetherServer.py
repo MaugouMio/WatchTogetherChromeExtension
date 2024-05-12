@@ -192,6 +192,7 @@ async def process(websocket, path):
 					current_id = data["id"]
 					start_time = 0
 					pause_time = 0
+					self_loop = False  # client will automatically remove loop state after loading a new video
 					# broadcast load video
 					packet = GetLoadPacket(current_id)
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
