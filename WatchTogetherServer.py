@@ -416,6 +416,9 @@ async def process(websocket, path):
 	except Exception as error:
 		print("[{0}] error: {1}".format(USERS[websocket]["id"], error))
 		
+	if USERS[websocket]["id"] >= 0:
+		print("[{0}] User {1} leaved".format(USERS[websocket]["id"], USERS[websocket]["name"]))
+		
 	del USERS[websocket]
 	if len(USERS) > 0:
 		packet = GetUserListPacket(list(USERS.values()))
