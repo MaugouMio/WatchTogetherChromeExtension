@@ -272,6 +272,7 @@ async def process(websocket, path):
 					insert_pos = max(current_id, 0)
 					start_time = 0
 					pause_time = 0
+					self_loop = False  # client will automatically remove loop state after loading a new video
 				elif has_pin:
 					if current_id == len(playlist) - 1:
 						current_id += len(data["vid"])
@@ -301,6 +302,7 @@ async def process(websocket, path):
 						# load next video
 						start_time = 0
 						pause_time = 0
+						self_loop = False  # client will automatically remove loop state after loading a new video
 						if current_id >= len(playlist):
 							current_id = -1
 						# broadcast new playlist and force load new video
@@ -327,6 +329,7 @@ async def process(websocket, path):
 							current_id = to_id
 							start_time = 0
 							pause_time = 0
+							self_loop = False  # client will automatically remove loop state after loading a new video
 							no_reload = False
 							need_update = True
 							
@@ -339,6 +342,7 @@ async def process(websocket, path):
 				start_time = 0
 				pause_time = 0
 				current_id = -1
+				self_loop = False  # client will automatically remove loop state after loading a new video
 				has_pin = False
 				# broadcast new playlist and force load new video
 				packet = GetListPacket(current_id, playlist, has_pin, False)
