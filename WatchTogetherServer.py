@@ -31,19 +31,6 @@ PLAYMODE = {
 
 
 
-current_id = -1
-start_time = 0
-pause_time = 0
-playback_rate = 1
-self_loop = False
-playlist = [
-	{"vid": "3cJzGD9xkzg", "user": "server", "invalid": ""},
-	{"vid": "lAM3diipp7Y", "user": "server", "invalid": ""}
-]
-playlist_info_cache = {}
-playmode = PLAYMODE["DEFAULT"]
-user_idx = 0
-has_pin = False
 # playlist data
 def GetListPacket(play_id, current_list, pin, update_only = True):
 	return json.dumps({
@@ -141,184 +128,223 @@ def GetUserIDPacket(id):
 
 
 
+if os.path.isfile("history.json"):
+	with open("history.json", "r") as f:
+		play_state = json.loads(f.read())
+else:
+	play_state = {
+		"current_id": -1,
+		"start_time": 0,
+		"pause_time": 0,
+		"playback_rate": 1,
+		"self_loop": False,
+		"playlist": [
+			{"vid": "3cJzGD9xkzg", "user": "server", "invalid": ""},
+			{"vid": "lAM3diipp7Y", "user": "server", "invalid": ""}
+		],
+		"playlist_info_cache": {},
+		"playmode": PLAYMODE["DEFAULT"],
+		"has_pin": False
+	}
+
+
+
+def OnExit():
+	with open("history.json", "w") as f:
+		f.write(json.dumps(play_state))
+		
+if os.name == "nt":  # is windows
+	try:
+		import win32api
+	except:
+		os.system("pip3 install pywin32")
+		import win32api
+	import win32con
+	
+	def handler(ctrlType):
+		OnExit()
+		if ctrlType == win32con.CTRL_C_EVENT:
+			exit()
+		return True
+	win32api.SetConsoleCtrlHandler(handler, True)
+elif os.name == "posix":  # is linux
+	import signal
+	def handler(*args):
+		OnExit()
+		exit()
+	signal.signal(signal.SIGTERM, handler)
+	signal.signal(signal.SIGINT, handler)
+
+
+
+user_idx = 0
 USERS = dict()
 async def process(websocket, path):
-	global current_id
-	global start_time
-	global pause_time
-	global playback_rate
-	global self_loop
-	global playlist
-	global playlist_info_cache
-	global playmode
 	global user_idx
-	global has_pin
 	
 	def MovePlaylist(from_id, to_id):
-		global current_id
-		
-		targetVideo = playlist[from_id]
+		targetVideo = play_state["playlist"][from_id]
 		if from_id < to_id:
 			for i in range(from_id, to_id):
-				playlist[i] = playlist[i + 1]
+				play_state["playlist"][i] = play_state["playlist"][i + 1]
 				
-			if current_id == from_id:
-				current_id = to_id
-			elif current_id <= to_id and current_id > from_id:
-				current_id -= 1
+			if play_state["current_id"] == from_id:
+				play_state["current_id"] = to_id
+			elif play_state["current_id"] <= to_id and play_state["current_id"] > from_id:
+				play_state["current_id"] -= 1
 		else:
 			for i in range(from_id, to_id, -1):
-				playlist[i] = playlist[i - 1]
+				play_state["playlist"][i] = play_state["playlist"][i - 1]
 				
-			if current_id == from_id:
-				current_id = to_id
-			elif current_id >= to_id and current_id < from_id:
-				current_id += 1
-		playlist[to_id] = targetVideo
+			if play_state["current_id"] == from_id:
+				play_state["current_id"] = to_id
+			elif play_state["current_id"] >= to_id and play_state["current_id"] < from_id:
+				play_state["current_id"] += 1
+		play_state["playlist"][to_id] = targetVideo
 	
 	
 	
 	try:
 		USERS[websocket] = {"name": "Anonymous", "id": -1}
 		
-		await websocket.send(GetListPacket(current_id, playlist, has_pin, False))
-		await websocket.send(GetPlayModePacket(playmode, self_loop))
+		await websocket.send(GetListPacket(play_state["current_id"], play_state["playlist"], play_state["has_pin"], False))
+		await websocket.send(GetPlayModePacket(play_state["playmode"], play_state["self_loop"]))
 		async for message in websocket:
 			data = json.loads(message)
 			print("[{0}] {1}".format(USERS[websocket]["id"], data))
 			protocol = data["type"]
 			if protocol == "load":
-				if data["id"] >= 0 and data["id"] < len(playlist):
-					current_id = data["id"]
-					start_time = 0
-					pause_time = 0
-					self_loop = False  # client will automatically remove loop state after loading a new video
+				if data["id"] >= 0 and data["id"] < len(play_state["playlist"]):
+					play_state["current_id"] = data["id"]
+					play_state["start_time"] = 0
+					play_state["pause_time"] = 0
+					play_state["self_loop"] = False  # client will automatically remove loop state after loading a new video
 					# broadcast load video
-					packet = GetLoadPacket(current_id)
+					packet = GetLoadPacket(play_state["current_id"])
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "ready":
-				if data["id"] == current_id:
-					if start_time == 0:
-						start_time = time.time()
+				if data["id"] == play_state["current_id"]:
+					if play_state["start_time"] == 0:
+						play_state["start_time"] = time.time()
 						
-					if pause_time > 0:
-						await websocket.send(GetPlayPacket(current_id, (pause_time - start_time) * playback_rate, playback_rate, True))
+					if play_state["pause_time"] > 0:
+						await websocket.send(GetPlayPacket(play_state["current_id"], (play_state["pause_time"] - play_state["start_time"]) * play_state["playback_rate"], play_state["playback_rate"], True))
 					else:
-						await websocket.send(GetPlayPacket(current_id, (time.time() - start_time) * playback_rate, playback_rate, False))
+						await websocket.send(GetPlayPacket(play_state["current_id"], (time.time() - play_state["start_time"]) * play_state["playback_rate"], play_state["playback_rate"], False))
 			elif protocol == "pause":
-				if data["id"] == current_id:
-					if pause_time == 0:
-						pause_time = time.time()
+				if data["id"] == play_state["current_id"]:
+					if play_state["pause_time"] == 0:
+						play_state["pause_time"] = time.time()
 						# broadcast pause
-						packet = GetPlayPacket(current_id, (pause_time - start_time) * playback_rate, playback_rate, True)
+						packet = GetPlayPacket(play_state["current_id"], (play_state["pause_time"] - play_state["start_time"]) * play_state["playback_rate"], play_state["playback_rate"], True)
 						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "play":
-				if data["id"] == current_id:
-					if "invalid" in playlist[current_id]:
-						playlist[current_id]["invalid"] = ""
+				if data["id"] == play_state["current_id"]:
+					if "invalid" in play_state["playlist"][play_state["current_id"]]:
+						play_state["playlist"][play_state["current_id"]]["invalid"] = ""
 						# broadcast video invalid state
-						packet = GetInvalidPacket(current_id, "")
+						packet = GetInvalidPacket(play_state["current_id"], "")
 						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 						
 					client_played_time = data["time"]
 					current_time = time.time()
-					if pause_time > 0 or abs((client_played_time / playback_rate) - (current_time - start_time)) > 1:  # 1 second diff tolerant
-						pause_time = 0  # force start playing
-						start_time = current_time - client_played_time / playback_rate
+					if play_state["pause_time"] > 0 or abs((client_played_time / play_state["playback_rate"]) - (current_time - play_state["start_time"])) > 1:  # 1 second diff tolerant
+						play_state["pause_time"] = 0  # force start playing
+						play_state["start_time"] = current_time - client_played_time / play_state["playback_rate"]
 						# broadcast seek to time
-						packet = GetPlayPacket(current_id, client_played_time, playback_rate, False)
+						packet = GetPlayPacket(play_state["current_id"], client_played_time, play_state["playback_rate"], False)
 						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "end":
-				if data["id"] == current_id:
+				if data["id"] == play_state["current_id"]:
 					if "error" in data:
 						invalid_by_user = USERS[websocket]["name"]
-						playlist[current_id]["invalid"] = invalid_by_user
+						play_state["playlist"][play_state["current_id"]]["invalid"] = invalid_by_user
 						# broadcast video invalid state
-						packet = GetInvalidPacket(current_id, invalid_by_user)
+						packet = GetInvalidPacket(play_state["current_id"], invalid_by_user)
 						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 						
-					start_time = 0
-					pause_time = 0
-					if self_loop:
+					play_state["start_time"] = 0
+					play_state["pause_time"] = 0
+					if play_state["self_loop"]:
 						# broadcast seek to start
-						packet = GetPlayPacket(current_id, 0, playback_rate, False)
+						packet = GetPlayPacket(play_state["current_id"], 0, play_state["playback_rate"], False)
 						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 					else:
-						if playmode == PLAYMODE["RANDOM"]:
-							rand_range = (len(playlist) - 1) if has_pin else len(playlist)
+						if play_state["playmode"] == PLAYMODE["RANDOM"]:
+							rand_range = (len(play_state["playlist"]) - 1) if play_state["has_pin"] else len(play_state["playlist"])
 							if rand_range <= 1:
-								current_id = -1  # no available random videos, stop playing
+								play_state["current_id"] = -1  # no available random videos, stop playing
 							else:
 								temp_list = list(range(rand_range))
-								temp_list[current_id], temp_list[-1] = temp_list[-1], temp_list[current_id]
-								current_id = temp_list[random.randint(0, len(temp_list) - 2)]  # random except the last element (current_id)
+								temp_list[play_state["current_id"]], temp_list[-1] = temp_list[-1], temp_list[play_state["current_id"]]
+								play_state["current_id"] = temp_list[random.randint(0, len(temp_list) - 2)]  # random except the last element (play_state["current_id"])
 						else:
-							current_id += 1
-							if current_id >= len(playlist):
-								if playmode == PLAYMODE["DEFAULT"]:
-									current_id = -1  # stop playing
-								elif playmode == PLAYMODE["LOOP"]:
-									current_id = 0
+							play_state["current_id"] += 1
+							if play_state["current_id"] >= len(play_state["playlist"]):
+								if play_state["playmode"] == PLAYMODE["DEFAULT"]:
+									play_state["current_id"] = -1  # stop playing
+								elif play_state["playmode"] == PLAYMODE["LOOP"]:
+									play_state["current_id"] = 0
 						
 						# delay a little bit and broadcast the next video load msg
 						await asyncio.sleep(2)
-						packet = GetLoadPacket(current_id)
+						packet = GetLoadPacket(play_state["current_id"])
 						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 						
 			elif protocol == "add":
-				wasPlaylistEmpty = len(playlist) == 0
+				wasPlaylistEmpty = len(play_state["playlist"]) == 0
 				user_name = USERS[websocket]["name"]
 				if "interrupt" in data:
-					insert_pos = max(current_id, 0)
-					start_time = 0
-					pause_time = 0
-					self_loop = False  # client will automatically remove loop state after loading a new video
-				elif has_pin:
-					if current_id == len(playlist) - 1:
-						current_id += len(data["vid"])
-					insert_pos = len(playlist) - 1
+					insert_pos = max(play_state["current_id"], 0)
+					play_state["start_time"] = 0
+					play_state["pause_time"] = 0
+					play_state["self_loop"] = False  # client will automatically remove loop state after loading a new video
+				elif play_state["has_pin"]:
+					if play_state["current_id"] == len(play_state["playlist"]) - 1:
+						play_state["current_id"] += len(data["vid"])
+					insert_pos = len(play_state["playlist"]) - 1
 				else:
-					insert_pos = len(playlist)
+					insert_pos = len(play_state["playlist"])
 					
 				insert_list = [{"vid": vid, "user": user_name, "invalid": ""} for vid in data["vid"]]
-				playlist[insert_pos:insert_pos] = insert_list
+				play_state["playlist"][insert_pos:insert_pos] = insert_list
 					
 				# broadcast added videos
 				if wasPlaylistEmpty or "interrupt" in data:
-					current_id = max(current_id, 0)
-					packet = GetAddPacket(current_id, insert_pos, insert_list, False)
+					play_state["current_id"] = max(play_state["current_id"], 0)
+					packet = GetAddPacket(play_state["current_id"], insert_pos, insert_list, False)
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 				else:
-					packet = GetAddPacket(current_id, insert_pos, insert_list)
+					packet = GetAddPacket(play_state["current_id"], insert_pos, insert_list)
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "remove":
 				target_id = data["id"]
-				if target_id >= 0 and target_id < len(playlist):
-					if target_id == len(playlist) - 1:
-						has_pin = False
+				if target_id >= 0 and target_id < len(play_state["playlist"]):
+					if target_id == len(play_state["playlist"]) - 1:
+						play_state["has_pin"] = False
 						
-					del playlist[target_id]
-					if target_id == current_id:
+					del play_state["playlist"][target_id]
+					if target_id == play_state["current_id"]:
 						# load next video
-						start_time = 0
-						pause_time = 0
-						self_loop = False  # client will automatically remove loop state after loading a new video
-						if current_id >= len(playlist):
-							current_id = -1
+						play_state["start_time"] = 0
+						play_state["pause_time"] = 0
+						play_state["self_loop"] = False  # client will automatically remove loop state after loading a new video
+						if play_state["current_id"] >= len(play_state["playlist"]):
+							play_state["current_id"] = -1
 						# broadcast new playlist and force load new video
-						packet = GetRemovePacket(current_id, target_id, False)
+						packet = GetRemovePacket(play_state["current_id"], target_id, False)
 						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 					else:
-						if target_id < current_id:
-							current_id -= 1
+						if target_id < play_state["current_id"]:
+							play_state["current_id"] -= 1
 						# broadcast new playlist
-						packet = GetRemovePacket(current_id, target_id)
+						packet = GetRemovePacket(play_state["current_id"], target_id)
 						await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "move":
 				from_id = data["from"]
 				to_id = data["to"]
-				if not has_pin or (from_id < len(playlist) - 1 and to_id < len(playlist) - 1):
-					if from_id >= 0 and from_id < len(playlist) and to_id >= 0 and to_id < len(playlist):
+				if not play_state["has_pin"] or (from_id < len(play_state["playlist"]) - 1 and to_id < len(play_state["playlist"]) - 1):
+					if from_id >= 0 and from_id < len(play_state["playlist"]) and to_id >= 0 and to_id < len(play_state["playlist"]):
 						need_update = False
 						if from_id != to_id:
 							MovePlaylist(from_id, to_id)
@@ -326,45 +352,45 @@ async def process(websocket, path):
 							
 						no_reload = True
 						if "interrupt" in data:
-							current_id = to_id
-							start_time = 0
-							pause_time = 0
-							self_loop = False  # client will automatically remove loop state after loading a new video
+							play_state["current_id"] = to_id
+							play_state["start_time"] = 0
+							play_state["pause_time"] = 0
+							play_state["self_loop"] = False  # client will automatically remove loop state after loading a new video
 							no_reload = False
 							need_update = True
 							
 						if need_update:
 							# broadcast new playlist
-							packet = GetMovePacket(current_id, from_id, to_id, no_reload)
+							packet = GetMovePacket(play_state["current_id"], from_id, to_id, no_reload)
 							await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "clear":
-				playlist.clear()
-				start_time = 0
-				pause_time = 0
-				current_id = -1
-				self_loop = False  # client will automatically remove loop state after loading a new video
-				has_pin = False
+				play_state["playlist"].clear()
+				play_state["start_time"] = 0
+				play_state["pause_time"] = 0
+				play_state["current_id"] = -1
+				play_state["self_loop"] = False  # client will automatically remove loop state after loading a new video
+				play_state["has_pin"] = False
 				# broadcast new playlist and force load new video
-				packet = GetListPacket(current_id, playlist, has_pin, False)
+				packet = GetListPacket(play_state["current_id"], play_state["playlist"], play_state["has_pin"], False)
 				await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "pin":
 				pin_id = data["id"]
 				if pin_id >= 0:
-					if not has_pin or pin_id != len(playlist) - 1:
-						has_pin = True
-						MovePlaylist(pin_id, len(playlist) - 1)
-				elif has_pin:
-					has_pin = False
+					if not play_state["has_pin"] or pin_id != len(play_state["playlist"]) - 1:
+						play_state["has_pin"] = True
+						MovePlaylist(pin_id, len(play_state["playlist"]) - 1)
+				elif play_state["has_pin"]:
+					play_state["has_pin"] = False
 					
 				# broadcast new playlist
-				packet = GetPinPacket(current_id, pin_id)
+				packet = GetPinPacket(play_state["current_id"], pin_id)
 				await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			
 			elif protocol == "search":
 				try:
 					playlist_obj = pytube.Playlist(data["url"])
 					playlist_id = playlist_obj.playlist_id
-					if playlist_id not in playlist_info_cache:
+					if playlist_id not in play_state["playlist_info_cache"]:
 						playlist_title = playlist_obj.title
 						video_id_list = [re.search(YT_VID_REGEX, url).group(1) for url in playlist_obj.video_urls]
 						
@@ -374,38 +400,38 @@ async def process(websocket, path):
 						else:  # use first video thumbnail
 							icon_url = f"https://i.ytimg.com/vi/{video_id_list[0]}/mqdefault.jpg"
 							
-						playlist_info_cache[playlist_id] = { "title": playlist_title, "icon": icon_url, "list": video_id_list }
+						play_state["playlist_info_cache"][playlist_id] = { "title": playlist_title, "icon": icon_url, "list": video_id_list }
 					
-					await websocket.send(GetPlaylistPacket(playlist_info_cache[playlist_id]))
+					await websocket.send(GetPlaylistPacket(play_state["playlist_info_cache"][playlist_id]))
 				except:
 					await websocket.send(GetPlaylistPacket(None))
 					
 			elif protocol == "playmode":
-				if data["mode"] != playmode:
-					playmode = data["mode"]
-					# broadcast new playmode
-					packet = GetPlayModePacket(playmode, self_loop)
+				if data["mode"] != play_state["playmode"]:
+					play_state["playmode"] = data["mode"]
+					# broadcast new play_state["playmode"]
+					packet = GetPlayModePacket(play_state["playmode"], play_state["self_loop"])
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "rate":
-				if abs(data["rate"] - playback_rate) > 0.01:
-					# always make [(current_time - start_time) * playback_rate] == video play time
-					if pause_time > 0:
-						video_time = (pause_time - start_time) * playback_rate
-						start_time = pause_time - video_time / playback_rate
+				if abs(data["rate"] - play_state["playback_rate"]) > 0.01:
+					# always make [(current_time - play_state["start_time"]) * play_state["playback_rate"]] == video play time
+					if play_state["pause_time"] > 0:
+						video_time = (play_state["pause_time"] - play_state["start_time"]) * play_state["playback_rate"]
+						play_state["start_time"] = play_state["pause_time"] - video_time / play_state["playback_rate"]
 					else:
 						current_time = time.time()
-						video_time = (current_time - start_time) * playback_rate
-						playback_rate = data["rate"]
-						start_time = current_time - video_time / playback_rate
+						video_time = (current_time - play_state["start_time"]) * play_state["playback_rate"]
+						play_state["playback_rate"] = data["rate"]
+						play_state["start_time"] = current_time - video_time / play_state["playback_rate"]
 						
 					# broadcast new playback rate using play packet
-					packet = GetPlayPacket(current_id, video_time, playback_rate, pause_time > 0)
+					packet = GetPlayPacket(play_state["current_id"], video_time, play_state["playback_rate"], play_state["pause_time"] > 0)
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 			elif protocol == "loop":
-				if data["state"] != self_loop:
-					self_loop = data["state"]
-					# broadcast new loop state using playmode packet
-					packet = GetPlayModePacket(playmode, self_loop)
+				if data["state"] != play_state["self_loop"]:
+					play_state["self_loop"] = data["state"]
+					# broadcast new loop state using play_state["playmode"] packet
+					packet = GetPlayModePacket(play_state["playmode"], play_state["self_loop"])
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 					
 			elif protocol == "name":
