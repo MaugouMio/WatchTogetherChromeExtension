@@ -287,13 +287,8 @@ function onReceive(e) {
 			rebuildPlaylist();
 			
 			if (ytPlayerReady) {
-				if (playingID < 0) {
-					// stop current playing video
-					if (ytPlayer.getPlayerState() == YTPlayerState.PLAYING || ytPlayer.getPlayerState() == YTPlayerState.PAUSED) {
-						ytPlayer.seekTo(0);
-						ytPlayer.cancelPlayback();
-					}
-				}
+				if (playingID < 0)
+					ytPlayer.cueVideoById("0");
 				else if (!msg.update_only)
 					ytPlayer.cueVideoById(serverPlaylist[playingID].vid);
 			}
@@ -314,8 +309,12 @@ function onReceive(e) {
 			serverPlaylist.splice(msg.at, 1);
 			rebuildPlaylist();
 			
-			if (ytPlayerReady && !msg.update_only)
-				ytPlayer.cueVideoById(serverPlaylist[playingID].vid);
+			if (ytPlayerReady && !msg.update_only) {
+				if (playingID >= 0)
+					ytPlayer.cueVideoById(serverPlaylist[playingID].vid);
+				else
+					ytPlayer.cueVideoById("0");
+			}
 			break;
 			
 		case "move":
