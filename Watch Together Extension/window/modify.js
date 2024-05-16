@@ -39,7 +39,7 @@ var serverSelfLoop = false;
 var serverHasPin = false;
 var cacheVideoInfo = {};
 
-var userList;
+var userList = [];
 var selfUserID;
 var userListFolded = false;
 
@@ -415,6 +415,11 @@ function onReceive(e) {
 			break;
 			
 		case "userlist":
+			if (userList.length < msg.list.length)
+				window.postMessage("join_sound");
+			else if (userList.length > msg.list.length)
+				window.postMessage("leave_sound");
+			
 			userList = msg.list;
 			userList.sort(function(a, b) {
 				return a.id - b.id;
