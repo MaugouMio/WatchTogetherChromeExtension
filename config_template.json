@@ -1,0 +1,20 @@
+{
+	"NOTE": "Remove all the events that you don't need",
+	"NOTE2": "Rename this file into 'config.json'",
+	"NOTE3": "Use %PARAM% in your shell command when you need the parameter to be replaced",
+	
+	
+	
+	"REGION user login/logout events": "================================",
+	"AVAILABLE PARAMS": [
+		{"USER": "the user that triggered the event"}
+	],
+	
+	"on_first_login": "echo shell command executed when the first user %USER% logged-in",
+	"on_login": "echo shell command executed when an user %USER% logged-in",
+	
+	"on_last_logout": "echo shell command executed when the last user %USER% logged-out",
+	"on_logout": "echo shell command executed when an user %USER% logged-out",
+	
+	"REGION END user login/logout events": "================================"
+}

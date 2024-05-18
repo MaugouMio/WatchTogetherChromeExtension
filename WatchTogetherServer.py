@@ -128,8 +128,9 @@ def GetUserIDPacket(id):
 
 
 
+# load last server state
 if os.path.isfile("history.json"):
-	with open("history.json", "r") as f:
+	with open("history.json", "r", encoding="utf8") as f:
 		play_state = json.loads(f.read())
 else:
 	play_state = {
@@ -146,11 +147,17 @@ else:
 		"playmode": PLAYMODE["DEFAULT"],
 		"has_pin": False
 	}
+	
+# load config
+config = dict()
+if os.path.isfile("config.json"):
+	with open("config.json", "r", encoding="utf8") as f:
+		config = json.loads(f.read())
 
 
 
 def OnExit():
-	with open("history.json", "w") as f:
+	with open("history.json", "w", encoding="utf8") as f:
 		f.write(json.dumps(play_state))
 		
 if os.name == "nt":  # is windows
@@ -435,7 +442,14 @@ async def process(websocket, path):
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
 					
 			elif protocol == "name":
+				USERS[websocket]["name"] = data["name"]
 				if USERS[websocket]["id"] < 0:
+					if len(USERS) == 1:
+						if "on_first_login" in config:
+							os.system(config["on_first_login"].replace("%USER%", USERS[websocket]["name"]))
+					if "on_login" in config:
+						os.system(config["on_login"].replace("%USER%", USERS[websocket]["name"]))
+						
 					USERS[websocket]["id"] = user_idx
 					user_idx += 1
 					if user_idx > 999:
@@ -443,7 +457,6 @@ async def process(websocket, path):
 						
 					await websocket.send(GetUserIDPacket(USERS[websocket]["id"]))
 						
-				USERS[websocket]["name"] = data["name"]
 				# broadcast to all users
 				packet = GetUserListPacket(list(USERS.values()))
 				await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
@@ -453,6 +466,12 @@ async def process(websocket, path):
 		
 	if USERS[websocket]["id"] >= 0:
 		print("[{0}] User {1} leaved".format(USERS[websocket]["id"], USERS[websocket]["name"]))
+		
+		if "on_logout" in config:
+			os.system(config["on_logout"].replace("%USER%", USERS[websocket]["name"]))
+		if len(USERS) == 1:
+			if "on_last_logout" in config:
+				os.system(config["on_last_logout"].replace("%USER%", USERS[websocket]["name"]))
 		
 	del USERS[websocket]
 	if len(USERS) > 0:
