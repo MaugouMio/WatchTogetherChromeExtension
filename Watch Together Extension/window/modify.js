@@ -125,6 +125,11 @@ function videoRightClick(e) {
 	else
 		pinBottomButton.innerHTML = "Pin to Bottom";
 	
+	if (isPinnedVideo || rightClickVideoIdx == playingID || rightClickVideoIdx == playingID + 1)
+		moveToNextButton.style.display = "None";
+	else
+		moveToNextButton.style.display = null;
+	
 	if (isPinnedVideo || rightClickVideoIdx == playingID)
 		interruptButton.style.display = "None";
 	else
@@ -786,50 +791,78 @@ if (watchTogetherIP != null) {
 			var $searchResultAuthor = document.createElement("p");
 			$searchResultAuthor.className = "search-result-text";
 			$searchResultBasic.appendChild($searchResultAuthor);
+			
+			let addVideoOperationFrame = document.createElement("button");
+			addVideoOperationFrame.className = "search-operation";
+			addVideoOperationFrame.disabled = true;
+			$searchResultBasic.appendChild(addVideoOperationFrame);
 		
-			let addVideoButton = document.createElement("button");
-			addVideoButton.className = "search-operation-button";
-			addVideoButton.innerHTML = "Add Video(s)";
-			addVideoButton.addEventListener("click", function() {
-				let tempList = [];
-				for (let i = 0; i < playlistPreviewItems.length; i++) {
-					if (playlistPreviewItems[i].classList.contains("active"))
-						tempList.push(searchResultPlaylist[i]);
-				}
-				sendMsg({"type": "add", "vid": tempList});
-			});
-			$searchResultBasic.appendChild(addVideoButton);
+				let addVideoButton = document.createElement("button");
+				addVideoButton.className = "search-operation-button";
+				addVideoButton.innerHTML = "Add Video(s)";
+				addVideoButton.addEventListener("click", function() {
+					let tempList = [];
+					for (let i = 0; i < playlistPreviewItems.length; i++) {
+						if (playlistPreviewItems[i].classList.contains("active"))
+							tempList.push(searchResultPlaylist[i]);
+					}
+					sendMsg({"type": "add", "vid": tempList, "mode": 0});
+				});
+				addVideoOperationFrame.appendChild(addVideoButton);
+			
+				let addNextVideoButton = document.createElement("button");
+				addNextVideoButton.className = "search-operation-button";
+				addNextVideoButton.innerHTML = "Insert Next Video(s)";
+				addNextVideoButton.addEventListener("click", function() {
+					if (serverHasPin && playingID == serverPlaylist.length - 1) {
+						alert("Can not insert videos next to the pinned video!");
+						return;
+					}
+					
+					let tempList = [];
+					for (let i = 0; i < playlistPreviewItems.length; i++) {
+						if (playlistPreviewItems[i].classList.contains("active"))
+							tempList.push(searchResultPlaylist[i]);
+					}
+					sendMsg({"type": "add", "vid": tempList, "mode": 1});
+				});
+				addVideoOperationFrame.appendChild(addNextVideoButton);
+			
+				let interruptVideoButton = document.createElement("button");
+				interruptVideoButton.className = "search-operation-button";
+				interruptVideoButton.innerHTML = "Interrupt Video(s)";
+				interruptVideoButton.addEventListener("click", function() {
+					let tempList = [];
+					for (let i = 0; i < playlistPreviewItems.length; i++) {
+						if (playlistPreviewItems[i].classList.contains("active"))
+							tempList.push(searchResultPlaylist[i]);
+					}
+					sendMsg({"type": "add", "vid": tempList, "mode": 2});
+				});
+				addVideoOperationFrame.appendChild(interruptVideoButton);
+			
+			let playlistOperationFrame = document.createElement("button");
+			playlistOperationFrame.className = "search-operation";
+			playlistOperationFrame.disabled = true;
+			$searchResultBasic.appendChild(playlistOperationFrame);
 		
-			let interruptVideoButton = document.createElement("button");
-			interruptVideoButton.className = "search-operation-button";
-			interruptVideoButton.innerHTML = "Interrupt Video(s)";
-			interruptVideoButton.addEventListener("click", function() {
-				let tempList = [];
-				for (let i = 0; i < playlistPreviewItems.length; i++) {
-					if (playlistPreviewItems[i].classList.contains("active"))
-						tempList.push(searchResultPlaylist[i]);
-				}
-				sendMsg({"type": "add", "vid": tempList, "interrupt": true});
-			});
-			$searchResultBasic.appendChild(interruptVideoButton);
-		
-			let selectAllButton = document.createElement("button");
-			selectAllButton.className = "search-operation-button";
-			selectAllButton.innerHTML = "Select All";
-			selectAllButton.addEventListener("click", function() {
-				for (let i = 0; i < playlistPreviewItems.length; i++)
-					playlistPreviewItems[i].classList.add("active");
-			});
-			$searchResultBasic.appendChild(selectAllButton);
-		
-			let deselectAllButton = document.createElement("button");
-			deselectAllButton.className = "search-operation-button";
-			deselectAllButton.innerHTML = "Deselect All";
-			deselectAllButton.addEventListener("click", function() {
-				for (let i = 0; i < playlistPreviewItems.length; i++)
-					playlistPreviewItems[i].classList.remove("active");
-			});
-			$searchResultBasic.appendChild(deselectAllButton);
+				let selectAllButton = document.createElement("button");
+				selectAllButton.className = "search-operation-button";
+				selectAllButton.innerHTML = "Select All";
+				selectAllButton.addEventListener("click", function() {
+					for (let i = 0; i < playlistPreviewItems.length; i++)
+						playlistPreviewItems[i].classList.add("active");
+				});
+				playlistOperationFrame.appendChild(selectAllButton);
+			
+				let deselectAllButton = document.createElement("button");
+				deselectAllButton.className = "search-operation-button";
+				deselectAllButton.innerHTML = "Deselect All";
+				deselectAllButton.addEventListener("click", function() {
+					for (let i = 0; i < playlistPreviewItems.length; i++)
+						playlistPreviewItems[i].classList.remove("active");
+				});
+				playlistOperationFrame.appendChild(deselectAllButton);
 		
 		var $searchResultPreview = document.createElement("div");
 		$searchResultPreview.id = "playlist-preview";
@@ -870,10 +903,28 @@ if (watchTogetherIP != null) {
 		});
 		rightClickMenu.appendChild(pinBottomButton);
 	
+		var moveToNextButton = document.createElement("button");
+		moveToNextButton.innerHTML = "Move to next";
+		moveToNextButton.className = "right-click-menu-item";
+		moveToNextButton.addEventListener("click", function(e) {
+			e.stopPropagation();
+			onClickOutside(e);
+			
+			if (playingID < 0 || playingID == rightClickVideoIdx)
+				return;
+			
+			let targetID = rightClickVideoIdx < playingID ? playingID : playingID + 1;
+			sendMsg({"type": "move", "from": rightClickVideoIdx, "to": targetID});
+		});
+		rightClickMenu.appendChild(moveToNextButton);
+	
 		var interruptButton = document.createElement("button");
 		interruptButton.innerHTML = "Interrupt";
 		interruptButton.className = "right-click-menu-item";
 		interruptButton.addEventListener("click", function(e) {
+			e.stopPropagation();
+			onClickOutside(e);
+			
 			let targetID = playingID < 0 ? rightClickVideoIdx : playingID;
 			if (targetID > rightClickVideoIdx)
 				targetID--;

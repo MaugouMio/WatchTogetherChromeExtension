@@ -301,17 +301,20 @@ async def process(websocket, path):
 			elif protocol == "add":
 				wasPlaylistEmpty = len(play_state["playlist"]) == 0
 				user_name = USERS[websocket]["name"]
-				if "interrupt" in data:
+				if data["mode"] == 2:  # interrupt
 					insert_pos = max(play_state["current_id"], 0)
 					play_state["start_time"] = 0
 					play_state["pause_time"] = 0
 					play_state["self_loop"] = False  # client will automatically remove loop state after loading a new video
-				elif play_state["has_pin"]:
-					if play_state["current_id"] == len(play_state["playlist"]) - 1:
-						play_state["current_id"] += len(data["vid"])
-					insert_pos = len(play_state["playlist"]) - 1
-				else:
-					insert_pos = len(play_state["playlist"])
+				elif data["mode"] == 1:  # insert next
+					insert_pos = play_state["current_id"] + 1  # add to head while not playing
+				else:  # add to tail
+					if play_state["has_pin"]:
+						if play_state["current_id"] == len(play_state["playlist"]) - 1:
+							play_state["current_id"] += len(data["vid"])
+						insert_pos = len(play_state["playlist"]) - 1
+					else:
+						insert_pos = len(play_state["playlist"])
 					
 				insert_list = [{"vid": vid, "user": user_name, "invalid": ""} for vid in data["vid"]]
 				play_state["playlist"][insert_pos:insert_pos] = insert_list
