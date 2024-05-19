@@ -164,6 +164,12 @@ function onServerClosed() {
 	history.back();
 };
 
+function refreshPlaylistCount() {
+	if (playingID < 0)
+		playlistCountInfo.innerHTML = `- / ${serverPlaylist.length}`;
+	else
+		playlistCountInfo.innerHTML = `${playingID + 1} / ${serverPlaylist.length}`;
+}
 function updatePlaylistOverlay(idx) {
 	if (idx == playingID) {
 		playlistObjs[idx].overlayObj.style.visibility = "visible";
@@ -280,6 +286,8 @@ function rebuildPlaylist() {
 	
 	if (playlistObjs.length == 0)
 		$playlistContainer.innerHTML = "Search and add videos to playlist";
+	
+	refreshPlaylistCount();
 }
 // on receive WebSocket server msg
 function onReceive(e) {
@@ -351,6 +359,7 @@ function onReceive(e) {
 			// update playing notation
 			for (let i = 0; i < playlistObjs.length; i++)
 				updatePlaylistOverlay(i);
+			refreshPlaylistCount();
 			
 			if (playingID >= 0)
 				ytPlayer.cueVideoById(serverPlaylist[playingID].vid);
@@ -763,6 +772,10 @@ if (watchTogetherIP != null) {
 	var $playlistContainer = document.createElement("div");
 	$playlistContainer.id = "playlist";
 	
+	var playlistCountInfo = document.createElement("div");
+	playlistCountInfo.id = "playlist-count-text";
+	playlistCountInfo.innerHTML = "- / 0";
+	
 	let searchField = document.createElement("div");
 	searchField.id = "search-field";
 	
@@ -1047,6 +1060,7 @@ if (watchTogetherIP != null) {
 		rightFrame.removeChild(tmpElement);
 		rightFrame.appendChild(playlistControlFrame);
 		rightFrame.appendChild($playlistContainer);
+		rightFrame.appendChild(playlistCountInfo);
 		
 		belowFrame.style.visibility = "hidden";
 		belowFrame.prepend(searchField, $searchResultFrame);
