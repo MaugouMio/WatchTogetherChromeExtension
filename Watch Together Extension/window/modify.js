@@ -421,9 +421,9 @@ function onReceive(e) {
 			
 		case "userlist":
 			if (userList.length < msg.list.length)
-				window.postMessage("join_sound");
+				window.postMessage({"type": "join_sound"});
 			else if (userList.length > msg.list.length)
-				window.postMessage("leave_sound");
+				window.postMessage({"type": "leave_sound"});
 			
 			userList = msg.list;
 			userList.sort(function(a, b) {
@@ -601,6 +601,15 @@ var urlParams = getParameterValue();
 var watchTogetherIP = urlParams["watchTogetherIP"];
 var nickName = urlParams["nickname"];
 if (watchTogetherIP != null) {
+	window.addEventListener("message", (event) => {
+		let msg = event.data;
+		switch (msg.type) {
+			case "init_volume":
+				soundSlider.value = msg.value;
+				soundVolumeText.innerHTML = `${msg.value}%`;
+				break;
+		}
+	});
 	// Inject some HTML elements =======================================================
 	
 	var userListFrame = document.createElement("div");
@@ -643,6 +652,48 @@ if (watchTogetherIP != null) {
 			userListFolded = true;
 		}
 	});
+	
+	let settingButton = document.createElement("button");
+	settingButton.id = "setting-button";
+	settingButton.innerHTML = "⚙︎";
+	settingButton.addEventListener("click", function() {
+		settingFrame.style.visibility = "visible";
+	});
+	
+	var settingFrame = document.createElement("button");
+	settingFrame.className = "mask-button";
+	settingFrame.style.visibility = "hidden";
+	settingFrame.addEventListener("click", function(e) {
+		e.stopPropagation();
+		settingFrame.style.visibility = "hidden";
+	});
+	
+		let settingPanel = document.createElement("div");
+		settingPanel.id = "setting-panel";
+		settingPanel.onclick = function(e) { e.stopPropagation(); }
+		settingFrame.appendChild(settingPanel);
+		
+			let soundSliderTitle = document.createElement("h3");
+			soundSliderTitle.innerHTML = "System Sound Volume";
+			soundSliderTitle.style.color = "#fff";
+			settingPanel.appendChild(soundSliderTitle);
+			
+			let soundSlider = document.createElement("input");
+			soundSlider.type = "range";
+			soundSlider.className = "slider";
+			soundSlider.min = "0";
+			soundSlider.max = "100";
+			soundSlider.value = "40";
+			soundSlider.oninput = function(e) {
+				soundVolumeText.innerHTML = `${this.value}%`;
+				window.postMessage({"type": "sound_volume", "value": this.value});
+			}
+			settingPanel.appendChild(soundSlider);
+		
+			var soundVolumeText = document.createElement("span");
+			soundVolumeText.innerHTML = "40%";
+			soundVolumeText.style.color = "#fff";
+			settingPanel.appendChild(soundVolumeText);
 	
 	var $ipInfo = document.createElement("label");
 	$ipInfo.id = "connecting-ip";
@@ -943,7 +994,7 @@ if (watchTogetherIP != null) {
 			event.stopPropagation();
 		}
 	});
-	window.onload = () => {
+	window.addEventListener("load", () => {
 		$ipInfo.innerHTML = "Connecting to " + watchTogetherIP;
 
 		ws = new WebSocket("wss://" + watchTogetherIP);
@@ -951,7 +1002,7 @@ if (watchTogetherIP != null) {
 		ws.onerror = onServerClosed; //onConnectFailed;
 		ws.onclose = onServerClosed;
 		ws.onmessage = onReceive;
-	}
+	});
 	window.onbeforeunload = function() {
 		if (ws !== undefined) {
 			selfClosing = true;
@@ -984,6 +1035,8 @@ if (watchTogetherIP != null) {
 		document.body.appendChild(foldUserListButton);
 		document.body.appendChild(userListFrame);
 		document.body.appendChild(renameFrame);
+		document.body.appendChild(settingButton);
+		document.body.appendChild(settingFrame);
 		
 		topBar.innerHTML = "";
 		topBar.appendChild($ipInfo);
