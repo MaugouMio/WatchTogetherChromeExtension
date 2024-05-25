@@ -320,7 +320,7 @@ async def process(websocket, path):
 				play_state["playlist"][insert_pos:insert_pos] = insert_list
 					
 				# broadcast added videos
-				if wasPlaylistEmpty or "interrupt" in data:
+				if wasPlaylistEmpty or data["mode"] == 2:
 					play_state["current_id"] = max(play_state["current_id"], 0)
 					packet = GetAddPacket(play_state["current_id"], insert_pos, insert_list, False)
 					await asyncio.wait([asyncio.create_task(user.send(packet)) for user in USERS])
