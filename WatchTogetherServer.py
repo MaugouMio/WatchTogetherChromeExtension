@@ -483,8 +483,16 @@ async def process(websocket, path):
 
 
 
-IP = "127.0.0.1"
-PORT = 5555
+SETTINGS = dict()
+# load settings
+with open("settings.txt", "r") as f:
+	settings = f.read().split("\n")
+	for setting in settings:
+		sep = setting.find("=")
+		SETTINGS[setting[:sep].rstrip()] = setting[(sep + 1):].lstrip().rstrip()
+
+IP = SETTINGS["IP"] if "IP" in SETTINGS else "127.0.0.1"
+PORT = int(SETTINGS["PORT"]) if "PORT" in SETTINGS else 5555
 
 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 localhost_pem = pathlib.Path(__file__).with_name("localhost.pem")
