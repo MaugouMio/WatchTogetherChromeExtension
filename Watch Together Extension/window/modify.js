@@ -1,3 +1,5 @@
+const sanitizePolicy = trustedTypes.createPolicy('sanitizePolicy', { createHTML: (string) => string });
+
 const YTPlayerState = {
 	UNLOADED: -1,
 	ENDED: 0,
@@ -121,9 +123,9 @@ function videoRightClick(e) {
 	
 	let isPinnedVideo = serverHasPin && rightClickVideoIdx == playlistObjs.length - 1;
 	if (isPinnedVideo)
-		pinBottomButton.innerHTML = "Remove Pin";
+		pinBottomButton.innerHTML = sanitizePolicy.createHTML("Remove Pin");
 	else
-		pinBottomButton.innerHTML = "Pin to Bottom";
+		pinBottomButton.innerHTML = sanitizePolicy.createHTML("Pin to Bottom");
 	
 	if (isPinnedVideo || rightClickVideoIdx == playingID || rightClickVideoIdx == playingID + 1)
 		moveToNextButton.style.display = "None";
@@ -148,12 +150,12 @@ function sendMsg(msg) {
 }
 // on WebSocket connected
 function onConnected() {
-	$ipInfo.innerHTML = "Connected to " + watchTogetherIP;
+	$ipInfo.innerHTML = sanitizePolicy.createHTML("Connected to " + watchTogetherIP);
 	sendMsg({"type": "name", "name": nickName});
 };
 // on WebSocket connect failed
 // function onConnectFailed() {
-	// $ipInfo.innerHTML = "Can not connect to " + watchTogetherIP;
+	// $ipInfo.innerHTML = sanitizePolicy.createHTML("Can not connect to " + watchTogetherIP);
 // };
 // on WebSocket server closed
 function onServerClosed() {
@@ -166,15 +168,15 @@ function onServerClosed() {
 
 function refreshPlaylistCount() {
 	if (playingID < 0)
-		playlistCountInfo.innerHTML = `- / ${serverPlaylist.length}`;
+		playlistCountInfo.innerHTML = sanitizePolicy.createHTML(`- / ${serverPlaylist.length}`);
 	else
-		playlistCountInfo.innerHTML = `${playingID + 1} / ${serverPlaylist.length}`;
+		playlistCountInfo.innerHTML = sanitizePolicy.createHTML(`${playingID + 1} / ${serverPlaylist.length}`);
 }
 function updatePlaylistOverlay(idx) {
 	if (idx == playingID) {
 		playlistObjs[idx].overlayObj.style.visibility = "visible";
 		playlistObjs[idx].overlayObj.style["text-decoration"] = null;
-		playlistObjs[idx].overlayObj.innerHTML = "playing";
+		playlistObjs[idx].overlayObj.innerHTML = sanitizePolicy.createHTML("playing");
 	}
 	else {
 		if (serverPlaylist[idx].invalid == "")
@@ -182,12 +184,12 @@ function updatePlaylistOverlay(idx) {
 		else {
 			playlistObjs[idx].overlayObj.style.visibility = "visible";
 			playlistObjs[idx].overlayObj.style["text-decoration"] = "line-through";
-			playlistObjs[idx].overlayObj.innerHTML = serverPlaylist[idx].invalid;
+			playlistObjs[idx].overlayObj.innerHTML = sanitizePolicy.createHTML(serverPlaylist[idx].invalid);
 		}
 	}
 }
 function rebuildPlaylist() {
-	$playlistContainer.innerHTML = "";
+	$playlistContainer.innerHTML = sanitizePolicy.createHTML("");
 	draggingIdx = -1;  // reset drag event
 	playlistObjs = [];
 	for (let i = 0; i < serverPlaylist.length; i++) {
@@ -201,7 +203,7 @@ function rebuildPlaylist() {
 		
 			let btnDrag = document.createElement("button");
 			btnDrag.className = "playlist-drag";
-			btnDrag.innerHTML = "⠿";
+			btnDrag.innerHTML = sanitizePolicy.createHTML("⠿");
 			if (!serverHasPin || i < serverPlaylist.length - 1) {
 				btnFrame.addEventListener("mouseover", videoDragEnter);
 				btnFrame.addEventListener("mouseout", videoDragLeave);
@@ -247,7 +249,7 @@ function rebuildPlaylist() {
 					fromUser.className = "playlist-item-info-text";
 					fromUser.style.height = "20%";
 					fromUser.style["text-wrap"] = "nowrap";
-					fromUser.innerHTML = userName;
+					fromUser.innerHTML = sanitizePolicy.createHTML(userName);
 					infoFrame.appendChild(fromUser);
 			
 			let playingOverlay = document.createElement("div");
@@ -256,7 +258,7 @@ function rebuildPlaylist() {
 			
 			let btnRemove = document.createElement("button");
 			btnRemove.className = "playlist-remove";
-			btnRemove.innerHTML = "X";
+			btnRemove.innerHTML = sanitizePolicy.createHTML("X");
 			btnRemove.addEventListener('click', function(event) {
 				sendMsg({"type": "remove", "id": i});
 			});
@@ -272,20 +274,20 @@ function rebuildPlaylist() {
 			fetch(`https://noembed.com/embed?dataType=json&url=https://www.youtube.com/watch?v=${videoID}`)
 				.then(res => res.json())
 				.then(data => {
-					title.innerHTML = data.title;
-					author.innerHTML = data.author_name;
+					title.innerHTML = sanitizePolicy.createHTML(data.title);
+					author.innerHTML = sanitizePolicy.createHTML(data.author_name);
 					// cache data for less html request
 					cacheVideoInfo[videoID] = { title: data.title, author: data.author_name };
 				});
 		}
 		else {
-			title.innerHTML = cacheData.title;
-			author.innerHTML = cacheData.author;
+			title.innerHTML = sanitizePolicy.createHTML(cacheData.title);
+			author.innerHTML = sanitizePolicy.createHTML(cacheData.author);
 		}
 	}
 	
 	if (playlistObjs.length == 0)
-		$playlistContainer.innerHTML = "Search and add videos to playlist";
+		$playlistContainer.innerHTML = sanitizePolicy.createHTML("Search and add videos to playlist");
 	
 	refreshPlaylistCount();
 }
@@ -439,11 +441,11 @@ function onReceive(e) {
 				return a.id - b.id;
 			});
 			
-			userListFrame.innerHTML = "";
+			userListFrame.innerHTML = sanitizePolicy.createHTML("");
 			for (let i = 0; i < userList.length; i++) {
 				let userElement = document.createElement("div");
 				userElement.classList.add("user");
-				userElement.innerHTML = `[${userList[i].id}] ${userList[i].name}`;
+				userElement.innerHTML = sanitizePolicy.createHTML(`[${userList[i].id}] ${userList[i].name}`);
 				if (userList[i].id == selfUserID) {
 					userElement.classList.add("self");
 					nickName = userList[i].name;
@@ -550,9 +552,9 @@ function onVideoError(e) {
 
 function showSearchResult(imageUrl, title, author) {
 	$searchResultImg.src = imageUrl;
-	$searchResultTitle.innerHTML = title;
-	$searchResultAuthor.innerHTML = author;
-	$searchResultPreview.innerHTML = "";
+	$searchResultTitle.innerHTML = sanitizePolicy.createHTML(title);
+	$searchResultAuthor.innerHTML = sanitizePolicy.createHTML(author);
+	$searchResultPreview.innerHTML = sanitizePolicy.createHTML("");
 	playlistPreviewItems = [];
 	
 	for (let i = 0; i < searchResultPlaylist.length; i++) {
@@ -615,7 +617,7 @@ if (watchTogetherIP != null) {
 		switch (msg.type) {
 			case "init_volume":
 				soundSlider.value = msg.value;
-				soundVolumeText.innerHTML = `${msg.value}%`;
+				soundVolumeText.innerHTML = sanitizePolicy.createHTML(`${msg.value}%`);
 				break;
 		}
 	});
@@ -634,7 +636,7 @@ if (watchTogetherIP != null) {
 		
 		let renameButton = document.createElement("button");
 		renameButton.id = "rename-button";
-		renameButton.innerHTML = "rename";
+		renameButton.innerHTML = sanitizePolicy.createHTML("rename");
 		renameButton.addEventListener("click", function() {
 			if (renameInput.value != nickName)
 				sendMsg({"type": "name", "name": renameInput.value});
@@ -643,18 +645,18 @@ if (watchTogetherIP != null) {
 	
 	var foldUserListButton = document.createElement("button");
 	foldUserListButton.id = "fold-user-button";
-	foldUserListButton.innerHTML = "﹀";
+	foldUserListButton.innerHTML = sanitizePolicy.createHTML("﹀");
 	foldUserListButton.style.bottom = "200px";
 	foldUserListButton.addEventListener("click", function() {
 		if (userListFolded) {
-			foldUserListButton.innerHTML = "﹀";
+			foldUserListButton.innerHTML = sanitizePolicy.createHTML("﹀");
 			userListFrame.style.visibility = "visible";
 			renameFrame.style.visibility = "visible";
 			foldUserListButton.style.bottom = "200px";
 			userListFolded = false;
 		}
 		else {
-			foldUserListButton.innerHTML = "︿";
+			foldUserListButton.innerHTML = sanitizePolicy.createHTML("︿");
 			userListFrame.style.visibility = "hidden";
 			renameFrame.style.visibility = "hidden";
 			foldUserListButton.style.bottom = "0";
@@ -664,7 +666,7 @@ if (watchTogetherIP != null) {
 	
 	let settingButton = document.createElement("button");
 	settingButton.id = "setting-button";
-	settingButton.innerHTML = "⚙︎";
+	settingButton.innerHTML = sanitizePolicy.createHTML("⚙︎");
 	settingButton.addEventListener("click", function() {
 		settingFrame.style.visibility = "visible";
 	});
@@ -683,7 +685,7 @@ if (watchTogetherIP != null) {
 		settingFrame.appendChild(settingPanel);
 		
 			let soundSliderTitle = document.createElement("h3");
-			soundSliderTitle.innerHTML = "System Sound Volume";
+			soundSliderTitle.innerHTML = sanitizePolicy.createHTML("System Sound Volume");
 			soundSliderTitle.style.color = "#fff";
 			settingPanel.appendChild(soundSliderTitle);
 			
@@ -694,13 +696,13 @@ if (watchTogetherIP != null) {
 			soundSlider.max = "100";
 			soundSlider.value = "40";
 			soundSlider.oninput = function(e) {
-				soundVolumeText.innerHTML = `${this.value}%`;
+				soundVolumeText.innerHTML = sanitizePolicy.createHTML(`${this.value}%`);
 				window.postMessage({"type": "sound_volume", "value": this.value});
 			}
 			settingPanel.appendChild(soundSlider);
 		
 			var soundVolumeText = document.createElement("span");
-			soundVolumeText.innerHTML = "40%";
+			soundVolumeText.innerHTML = sanitizePolicy.createHTML("40%");
 			soundVolumeText.style.color = "#fff";
 			settingPanel.appendChild(soundVolumeText);
 	
@@ -715,7 +717,7 @@ if (watchTogetherIP != null) {
 		
 			let whereButton = document.createElement("button");
 			whereButton.className = "playlist-control-button";
-			whereButton.innerHTML = "where";
+			whereButton.innerHTML = sanitizePolicy.createHTML("where");
 			whereButton.addEventListener("click", function() {
 				if (playingID < 0)
 					return;
@@ -728,7 +730,7 @@ if (watchTogetherIP != null) {
 		
 			let nextButton = document.createElement("button");
 			nextButton.className = "playlist-control-button";
-			nextButton.innerHTML = "next";
+			nextButton.innerHTML = sanitizePolicy.createHTML("next");
 			nextButton.addEventListener("click", function() {
 				if (playingID < 0)
 					return;
@@ -738,7 +740,7 @@ if (watchTogetherIP != null) {
 		
 			let clearButton = document.createElement("button");
 			clearButton.className = "playlist-control-button";
-			clearButton.innerHTML = "clear";
+			clearButton.innerHTML = sanitizePolicy.createHTML("clear");
 			clearButton.addEventListener("click", function() {
 				sendMsg({"type": "clear"});
 			});
@@ -749,7 +751,7 @@ if (watchTogetherIP != null) {
 	
 			var loopButton = document.createElement("button");
 			loopButton.className = "playlist-control-button";
-			loopButton.innerHTML = "loop";
+			loopButton.innerHTML = sanitizePolicy.createHTML("loop");
 			loopButton.addEventListener("click", function() {
 				if (serverPlayMode == PlayMode.LOOP)
 					sendMsg({"type": "playmode", "mode": PlayMode.DEFAULT});
@@ -760,7 +762,7 @@ if (watchTogetherIP != null) {
 		
 			var randomButton = document.createElement("button");
 			randomButton.className = "playlist-control-button";
-			randomButton.innerHTML = "random";
+			randomButton.innerHTML = sanitizePolicy.createHTML("random");
 			randomButton.addEventListener("click", function() {
 				if (serverPlayMode == PlayMode.RANDOM)
 					sendMsg({"type": "playmode", "mode": PlayMode.DEFAULT});
@@ -774,14 +776,14 @@ if (watchTogetherIP != null) {
 	
 	var playlistCountInfo = document.createElement("div");
 	playlistCountInfo.id = "playlist-count-text";
-	playlistCountInfo.innerHTML = "- / 0";
+	playlistCountInfo.innerHTML = sanitizePolicy.createHTML("- / 0");
 	
 	let searchField = document.createElement("div");
 	searchField.id = "search-field";
 	
 		var $urlInputLabel = document.createElement("h3");
 		$urlInputLabel.for = "url-input";
-		$urlInputLabel.innerHTML = "Youtube URL:";
+		$urlInputLabel.innerHTML = sanitizePolicy.createHTML("Youtube URL:");
 		searchField.appendChild($urlInputLabel);
 		
 		var $urlInput = document.createElement("textarea");
@@ -792,7 +794,7 @@ if (watchTogetherIP != null) {
 		var $searchVideoButton = document.createElement("button");
 		$searchVideoButton.id = "video-button";
 		$searchVideoButton.className = "search-button";
-		$searchVideoButton.innerHTML = "Video";
+		$searchVideoButton.innerHTML = sanitizePolicy.createHTML("Video");
 		$searchVideoButton.addEventListener("click", function() {
 			try {
 				var vID = $urlInput.value.match(/youtu(?:.*\/v\/|.*v\=|\.be\/)([A-Za-z0-9_\-]{11})/)[1];
@@ -830,7 +832,7 @@ if (watchTogetherIP != null) {
 		var $searchPlaylistButton = document.createElement("button");
 		$searchPlaylistButton.id = "playlist-button";
 		$searchPlaylistButton.className = "search-button";
-		$searchPlaylistButton.innerHTML = "Playlist";
+		$searchPlaylistButton.innerHTML = sanitizePolicy.createHTML("Playlist");
 		$searchPlaylistButton.addEventListener("click", function() {
 			sendMsg({"type": "search", "url": $urlInput.value});
 			$urlInput.value = "";
@@ -863,7 +865,7 @@ if (watchTogetherIP != null) {
 		
 				let addVideoButton = document.createElement("button");
 				addVideoButton.className = "search-operation-button";
-				addVideoButton.innerHTML = "Add Video(s)";
+				addVideoButton.innerHTML = sanitizePolicy.createHTML("Add Video(s)");
 				addVideoButton.addEventListener("click", function() {
 					let tempList = [];
 					for (let i = 0; i < playlistPreviewItems.length; i++) {
@@ -876,7 +878,7 @@ if (watchTogetherIP != null) {
 			
 				let addNextVideoButton = document.createElement("button");
 				addNextVideoButton.className = "search-operation-button";
-				addNextVideoButton.innerHTML = "Insert Next Video(s)";
+				addNextVideoButton.innerHTML = sanitizePolicy.createHTML("Insert Next Video(s)");
 				addNextVideoButton.addEventListener("click", function() {
 					if (serverHasPin && playingID == serverPlaylist.length - 1) {
 						alert("Can not insert videos next to the pinned video!");
@@ -894,7 +896,7 @@ if (watchTogetherIP != null) {
 			
 				let interruptVideoButton = document.createElement("button");
 				interruptVideoButton.className = "search-operation-button";
-				interruptVideoButton.innerHTML = "Interrupt Video(s)";
+				interruptVideoButton.innerHTML = sanitizePolicy.createHTML("Interrupt Video(s)");
 				interruptVideoButton.addEventListener("click", function() {
 					let tempList = [];
 					for (let i = 0; i < playlistPreviewItems.length; i++) {
@@ -912,7 +914,7 @@ if (watchTogetherIP != null) {
 		
 				let selectAllButton = document.createElement("button");
 				selectAllButton.className = "search-operation-button";
-				selectAllButton.innerHTML = "Select All";
+				selectAllButton.innerHTML = sanitizePolicy.createHTML("Select All");
 				selectAllButton.addEventListener("click", function() {
 					for (let i = 0; i < playlistPreviewItems.length; i++)
 						playlistPreviewItems[i].classList.add("active");
@@ -921,7 +923,7 @@ if (watchTogetherIP != null) {
 			
 				let deselectAllButton = document.createElement("button");
 				deselectAllButton.className = "search-operation-button";
-				deselectAllButton.innerHTML = "Deselect All";
+				deselectAllButton.innerHTML = sanitizePolicy.createHTML("Deselect All");
 				deselectAllButton.addEventListener("click", function() {
 					for (let i = 0; i < playlistPreviewItems.length; i++)
 						playlistPreviewItems[i].classList.remove("active");
@@ -937,7 +939,7 @@ if (watchTogetherIP != null) {
 	rightClickMenu.id = "right-click-menu";
 	
 		let copyURLButton = document.createElement("button");
-		copyURLButton.innerHTML = "Copy URL";
+		copyURLButton.innerHTML = sanitizePolicy.createHTML("Copy URL");
 		copyURLButton.className = "right-click-menu-item";
 		copyURLButton.addEventListener("click", function(e) {
 			e.stopPropagation();
@@ -968,7 +970,7 @@ if (watchTogetherIP != null) {
 		rightClickMenu.appendChild(pinBottomButton);
 	
 		var moveToNextButton = document.createElement("button");
-		moveToNextButton.innerHTML = "Move to next";
+		moveToNextButton.innerHTML = sanitizePolicy.createHTML("Move to next");
 		moveToNextButton.className = "right-click-menu-item";
 		moveToNextButton.addEventListener("click", function(e) {
 			e.stopPropagation();
@@ -983,7 +985,7 @@ if (watchTogetherIP != null) {
 		rightClickMenu.appendChild(moveToNextButton);
 	
 		var interruptButton = document.createElement("button");
-		interruptButton.innerHTML = "Interrupt";
+		interruptButton.innerHTML = sanitizePolicy.createHTML("Interrupt");
 		interruptButton.className = "right-click-menu-item";
 		interruptButton.addEventListener("click", function(e) {
 			e.stopPropagation();
@@ -1008,7 +1010,7 @@ if (watchTogetherIP != null) {
 		}
 	});
 	window.addEventListener("load", () => {
-		$ipInfo.innerHTML = "Connecting to " + watchTogetherIP;
+		$ipInfo.innerHTML = sanitizePolicy.createHTML("Connecting to " + watchTogetherIP);
 
 		ws = new WebSocket("wss://" + watchTogetherIP);
 		ws.onopen = onConnected;
@@ -1051,7 +1053,7 @@ if (watchTogetherIP != null) {
 		document.body.appendChild(settingButton);
 		document.body.appendChild(settingFrame);
 		
-		topBar.innerHTML = "";
+		topBar.innerHTML = sanitizePolicy.createHTML("");
 		topBar.appendChild($ipInfo);
 		topBar.appendChild(rightClickMenu);
 		
