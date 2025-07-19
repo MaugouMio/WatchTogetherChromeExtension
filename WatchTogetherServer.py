@@ -1,4 +1,4 @@
-import os
+import os, sys
 
 try:
 	import websockets
@@ -185,6 +185,10 @@ elif os.name == "posix":  # is linux
 
 user_idx = 0
 USERS = dict()
+
+async def process_new(websocket):
+	await process(websocket, None)
+
 async def process(websocket, path):
 	global user_idx
 	
@@ -502,7 +506,12 @@ else:
 	ssl_context.load_cert_chain(CERT_CHAIN)
 
 async def main():
-	async with websockets.serve(process, IP, PORT, ssl=ssl_context):
+	if sys.version_info.minor >= 13:
+		server = websockets.serve(process_new, IP, PORT, ssl=ssl_context)
+	else:
+		server = websockets.serve(process, IP, PORT, ssl=ssl_context)
+	
+	async with server:
 		await asyncio.Future()  # run forever
 
 if __name__ == "__main__":
