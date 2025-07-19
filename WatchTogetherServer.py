@@ -12,7 +12,6 @@ except:
 	os.system("pip3 install pytube")
 	import pytube
 
-import pathlib
 import ssl
 import asyncio
 import json
@@ -491,12 +490,16 @@ with open("settings.txt", "r") as f:
 		sep = setting.find("=")
 		SETTINGS[setting[:sep].rstrip()] = setting[(sep + 1):].lstrip().rstrip()
 
-IP = SETTINGS["IP"] if "IP" in SETTINGS else "127.0.0.1"
-PORT = int(SETTINGS["PORT"]) if "PORT" in SETTINGS else 5555
+IP = SETTINGS.get("IP", "127.0.0.1")
+PORT = int(SETTINGS.get("PORT", 5555))
+CERT_CHAIN = SETTINGS.get("CERT_CHAIN", "localhost.pem")
+CERT_PRIVKEY = SETTINGS.get("CERT_PRIVKEY")
 
 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-localhost_pem = pathlib.Path(__file__).with_name("localhost.pem")
-ssl_context.load_cert_chain(localhost_pem)
+if CERT_PRIVKEY:
+	ssl_context.load_cert_chain(CERT_CHAIN, CERT_PRIVKEY)
+else:
+	ssl_context.load_cert_chain(CERT_CHAIN)
 
 async def main():
 	async with websockets.serve(process, IP, PORT, ssl=ssl_context):
