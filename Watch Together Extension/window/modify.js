@@ -1044,7 +1044,7 @@ if (watchTogetherIP != null) {
 		let nextButton = document.getElementsByClassName("ytp-next-button")[0];
 		let miniPlayerButton = document.getElementsByClassName("ytp-miniplayer-button")[0];
 		let sizeControlButton = document.getElementsByClassName("ytp-size-button")[0];
-		if (!ytPlayer || !htmlVideo || !rightFrame || !topBar || !belowFrame || !nextButton || !miniPlayerButton || !sizeControlButton)
+		if (!ytPlayer || !htmlVideo || !rightFrame || !topBar || !belowFrame)
 			return;
 		
 		document.body.appendChild(foldUserListButton);
@@ -1067,9 +1067,9 @@ if (watchTogetherIP != null) {
 		belowFrame.style.visibility = "hidden";
 		belowFrame.prepend(searchField, $searchResultFrame);
 		
-		nextButton.parentElement.removeChild(nextButton);
-		miniPlayerButton.parentElement.removeChild(miniPlayerButton);
-		sizeControlButton.parentElement.removeChild(sizeControlButton);
+		nextButton?.parentElement.removeChild(nextButton);
+		miniPlayerButton?.parentElement.removeChild(miniPlayerButton);
+		sizeControlButton?.parentElement.removeChild(sizeControlButton);
 		
 		// stop the video before it ends to avoid autoplay
 		htmlVideo.ontimeupdate = () => {
